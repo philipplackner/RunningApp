@@ -15,6 +15,6 @@ abstract class BaseFragment(
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(layoutId, container)
+        return inflater.inflate(layoutId, container, false)
     }
 }

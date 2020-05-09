@@ -10,9 +10,9 @@ data class Run(
     @PrimaryKey(autoGenerate = true)
     var id: Int? = null,
     var img: Bitmap? = null,
-    var date: Date? = null,
+    //var date: Date? = null,
     var avgSpeed: Double = 0.0,
     var distance: Float = 0.0f,
-    var timeInMin: Int = 0,
+    var timeInSeconds: Int = 0,
     var caloriesBurned: Int = 0
 )
