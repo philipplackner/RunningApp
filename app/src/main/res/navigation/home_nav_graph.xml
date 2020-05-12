@@ -13,6 +13,9 @@
         <action
             android:id="@+id/action_runFragment2_to_settingsFragment"
             app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_runFragment2_to_trackingFragment"
+            app:destination="@id/trackingFragment" />
     </fragment>
     <fragment
         android:id="@+id/settingsFragment"
@@ -22,4 +25,8 @@
         android:id="@+id/statisticsFragment"
         android:name="com.androiddevs.runningapp.ui.fragments.StatisticsFragment"
         android:label="StatisticsFragment" />
+    <fragment
+        android:id="@+id/trackingFragment"
+        android:name="com.androiddevs.runningapp.ui.fragments.TrackingFragment"
+        android:label="TrackingFragment" />
 </navigation>

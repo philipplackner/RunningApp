@@ -6,6 +6,7 @@ import androidx.navigation.ui.setupWithNavController
 import com.androiddevs.runningapp.R
 import dagger.android.support.DaggerAppCompatActivity
 import kotlinx.android.synthetic.main.activity_home.*
+import pub.devrel.easypermissions.EasyPermissions
 
 class HomeActivity : DaggerAppCompatActivity() {
 

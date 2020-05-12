@@ -1,13 +1,7 @@
 package com.androiddevs.runningapp.di
 
-import com.androiddevs.runningapp.di.fragments.RunFragmentModule
-import com.androiddevs.runningapp.di.fragments.SettingsFragmentModule
-import com.androiddevs.runningapp.di.fragments.SetupFragmentModule
-import com.androiddevs.runningapp.di.fragments.StatisticsFragmentModule
-import com.androiddevs.runningapp.ui.fragments.RunFragment
-import com.androiddevs.runningapp.ui.fragments.SettingsFragment
-import com.androiddevs.runningapp.ui.fragments.SetupFragment
-import com.androiddevs.runningapp.ui.fragments.StatisticsFragment
+import com.androiddevs.runningapp.di.fragments.*
+import com.androiddevs.runningapp.ui.fragments.*
 import dagger.Module
 import dagger.android.ContributesAndroidInjector
 
@@ -25,4 +19,7 @@ abstract class FragmentsBuilderModule {
 
     @ContributesAndroidInjector(modules = [SettingsFragmentModule::class])
     abstract fun bindSettingsFragment(): SettingsFragment
+
+    @ContributesAndroidInjector(modules = [TrackingFragmentModule::class])
+    abstract fun bindTrackingFragment(): TrackingFragment
 }

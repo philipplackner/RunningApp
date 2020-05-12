@@ -33,4 +33,9 @@
         <item name="textAppearanceOverline">@style/TextAppearance.MaterialComponents.Overline</item>
     </style>
 
+    <style name="TextViewStyle" parent="Widget.MaterialComponents.TextView">
+        <item name="android:textColor">@android:color/white</item>
+
+    </style>
+
 </resources>

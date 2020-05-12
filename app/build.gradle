@@ -80,6 +80,7 @@ dependencies {
 
     // Google Maps Location Services
     implementation 'com.google.android.gms:play-services-location:17.0.0'
+    implementation 'com.google.android.gms:play-services-maps:17.0.0'
 
     // Dagger Core
     implementation "com.google.dagger:dagger:2.25.4"
@@ -89,4 +90,10 @@ dependencies {
     api 'com.google.dagger:dagger-android:2.23.2'
     api 'com.google.dagger:dagger-android-support:2.23.2'
     kapt 'com.google.dagger:dagger-android-processor:2.23.2'
+
+    // Easy Permissions
+    implementation 'pub.devrel:easypermissions:3.0.0'
+
+    // Timber
+    implementation 'com.jakewharton.timber:timber:4.7.1'
 }
