@@ -7,6 +7,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.view.View
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
@@ -21,6 +22,7 @@ import com.androiddevs.runningapp.ui.TrackingViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_tracking.*
@@ -31,7 +33,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
     lateinit var map: GoogleMap
 
     var isTracking = false
-    private val pathPoints = mutableListOf<LatLng>()
+    private var pathPoints = mutableListOf<LatLng>()
 
     private lateinit var viewModel: TrackingViewModel
 
@@ -41,6 +43,20 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
         mapView.onCreate(mapViewBundle)
         viewModel = ViewModelProvider(this).get(TrackingViewModel::class.java)
 
+        viewModel.isTracking.observe(viewLifecycleOwner, Observer {
+            isTracking = it
+        })
+
+        viewModel.pathPoints.observe(viewLifecycleOwner, Observer {
+            pathPoints = it
+            val polylineOptions = PolylineOptions()
+                .color(POLYLINE_COLOR)
+                .width(POLYLINE_WIDTH)
+                .addAll(pathPoints)
+            map.addPolyline(polylineOptions)
+            Timber.d("Added path point")
+        })
+
         btnToggleRun.setOnClickListener {
             toggleRun()
         }
@@ -49,6 +65,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
             map = it.apply {
                 setMinZoomPreference(MAP_ZOOM)
             }
+            viewModel.initLiveData()
         }
     }
 
@@ -73,6 +90,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
 
     @SuppressLint("MissingPermission")
     private fun toggleRun() {
+        viewModel.toggleRun()
         isTracking = !isTracking
         val locationManager =
             activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -109,12 +127,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(pos, MAP_ZOOM))
             }
 
-            pathPoints.add(pos)
-            val polylineOptions = PolylineOptions()
-                .color(POLYLINE_COLOR)
-                .width(POLYLINE_WIDTH)
-                .addAll(pathPoints)
-            map.addPolyline(polylineOptions)
+            viewModel.addPathPoint(pos)
         }
     }
 
