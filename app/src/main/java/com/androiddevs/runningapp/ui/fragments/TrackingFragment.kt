@@ -8,7 +8,6 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_BUNDLE_KEY
@@ -17,12 +16,12 @@ import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
-import com.androiddevs.runningapp.other.LocationUtility
+import com.androiddevs.runningapp.other.TrackingUtility
+import com.androiddevs.runningapp.ui.HomeActivity
 import com.androiddevs.runningapp.ui.TrackingViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_tracking.*
@@ -30,7 +29,7 @@ import timber.log.Timber
 
 class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListener {
 
-    lateinit var map: GoogleMap
+    var map: GoogleMap? = null
 
     var isTracking = false
     private var pathPoints = mutableListOf<LatLng>()
@@ -41,20 +40,28 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
         super.onViewCreated(view, savedInstanceState)
         val mapViewBundle = savedInstanceState?.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapView.onCreate(mapViewBundle)
-        viewModel = ViewModelProvider(this).get(TrackingViewModel::class.java)
+        viewModel = (activity as HomeActivity).trackingViewModel
 
         viewModel.isTracking.observe(viewLifecycleOwner, Observer {
             isTracking = it
+            Timber.d("IsTracking is now $isTracking")
+            updateLocationChecking()
         })
 
         viewModel.pathPoints.observe(viewLifecycleOwner, Observer {
-            pathPoints = it
             val polylineOptions = PolylineOptions()
                 .color(POLYLINE_COLOR)
                 .width(POLYLINE_WIDTH)
-                .addAll(pathPoints)
-            map.addPolyline(polylineOptions)
-            Timber.d("Added path point")
+                .addAll(it)
+            map?.addPolyline(polylineOptions)
+            if(it.isNotEmpty()) {
+                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last(), MAP_ZOOM))
+            }
+        })
+
+        viewModel.timeRunInSeconds.observe(viewLifecycleOwner, Observer {
+            val formattedTime = TrackingUtility.getFormattedTimeWithSeconds(it)
+            tvTimer.text = formattedTime
         })
 
         btnToggleRun.setOnClickListener {
@@ -65,7 +72,35 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
             map = it.apply {
                 setMinZoomPreference(MAP_ZOOM)
             }
-            viewModel.initLiveData()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun updateLocationChecking() {
+        val locationManager =
+            activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (isTracking) {
+            if (TrackingUtility.hasLocationPermissions(requireContext())) {
+                locationManager.requestLocationUpdates(
+                    LOCATION_PROVIDER,
+                    MIN_LOCATION_UPDATE_INTERVAL,
+                    MIN_LOCATION_UPDATE_DISTANCE,
+                    this
+                )
+                btnToggleRun.text = "Stop"
+                Timber.d("Tracking started")
+            } else {
+                Snackbar.make(
+                    requireView(),
+                    "Please accept the location permissions first",
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+
+        } else {
+            locationManager.removeUpdates(this)
+            btnToggleRun.text = "Start"
+            Timber.d("Tracking stopped")
         }
     }
 
@@ -91,40 +126,13 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
     @SuppressLint("MissingPermission")
     private fun toggleRun() {
         viewModel.toggleRun()
-        isTracking = !isTracking
-        val locationManager =
-            activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (isTracking) {
-            if (LocationUtility.hasLocationPermissions(requireContext())) {
-                locationManager.requestLocationUpdates(
-                    LOCATION_PROVIDER,
-                    MIN_LOCATION_UPDATE_INTERVAL,
-                    MIN_LOCATION_UPDATE_DISTANCE,
-                    this
-                )
-                btnToggleRun.text = "Stop"
-                mapView.visibility = View.VISIBLE
-                Timber.d("Tracking started")
-            } else {
-                Snackbar.make(
-                    requireView(),
-                    "Please accept the location permissions first",
-                    Snackbar.LENGTH_LONG
-                ).show()
-            }
-
-        } else {
-            locationManager.removeUpdates(this)
-            btnToggleRun.text = "Start"
-            Timber.d("Tracking stopped")
-        }
     }
 
     private fun addPathPoint(location: Location?) {
         location?.let {
             val pos = LatLng(location.latitude, location.longitude)
             if (pathPoints.isEmpty()) {
-                map.animateCamera(CameraUpdateFactory.newLatLngZoom(pos, MAP_ZOOM))
+                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(pos, MAP_ZOOM))
             }
 
             viewModel.addPathPoint(pos)
@@ -136,8 +144,10 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
         val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapViewBundle?.let {
             outState.putBundle(MAP_VIEW_BUNDLE_KEY, Bundle())
+            Timber.d("Putting empty Bundle")
+        } ?: mapView.onSaveInstanceState(mapViewBundle).also {
+            Timber.d("Putting non-empty bundle")
         }
-        mapView.onSaveInstanceState(mapViewBundle)
     }
 
     override fun onResume() {
