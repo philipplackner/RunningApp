@@ -7,6 +7,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +37,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.*
 import javax.inject.Inject
+import kotlin.math.round
 
 class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListener {
 
@@ -180,13 +182,13 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
             bounds.include(point)
         }
         val width = mapView.width
-        val height = mapView.height
+        val height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200f, resources.displayMetrics).toInt()
         map?.moveCamera(
             CameraUpdateFactory.newLatLngBounds(
                 bounds.build(),
                 width,
                 height,
-                (height * 0.15).toInt()
+                (height * 0.05f).toInt()
             )
         )
     }
@@ -194,12 +196,15 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
     private fun saveRunToDB() {
         map?.snapshot { bmp ->
             val distanceInMeters = TrackingUtility.calculateTotalDistance(pathPoints).toInt()
-            val avgSpeed = (distanceInMeters / 1000f) / (curTimeInMillis / 1000 / 60 / 60)
+            Timber.d("distanceInMeters: $distanceInMeters")
+            Timber.d("curTimeInMillis: $curTimeInMillis")
+            val avgSpeed = round((distanceInMeters / 1000f) / (curTimeInMillis / 1000f / 60 / 60) * 10) / 10f
             val date = Calendar.getInstance().time
             val weight = activity?.getSharedPreferences("sharedPref", MODE_PRIVATE)?.getFloat("weight", 80f)
             val caloriesBurned = ((distanceInMeters / 1000f) * weight!!).toInt()
             val run = Run(bmp, date, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
-
+            viewModel.insertRun(run)
+            Snackbar.make(requireView(), "Run saved successfully.", Snackbar.LENGTH_LONG).show()
         }
     }
 

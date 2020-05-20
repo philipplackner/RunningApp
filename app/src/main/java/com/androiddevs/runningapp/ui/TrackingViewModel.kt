@@ -4,13 +4,18 @@ import android.location.Location
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.androiddevs.runningapp.db.Run
 import com.androiddevs.runningapp.other.Constants.Companion.TIMER_UPDATE_INTERVAL
+import com.androiddevs.runningapp.repositories.HomeRepository
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class TrackingViewModel : ViewModel() {
+class TrackingViewModel @Inject constructor(
+    val homeRepository: HomeRepository
+) : ViewModel() {
 
     private var isTimerEnabled = false
     private var lapTime = 0L
@@ -59,6 +64,10 @@ class TrackingViewModel : ViewModel() {
             add(pos)
             pathPoints.postValue(this)
         }
+    }
+
+    fun insertRun(run: Run) = viewModelScope.launch {
+        homeRepository.insertRun(run)
     }
 
 }

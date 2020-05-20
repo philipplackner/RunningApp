@@ -8,12 +8,13 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/clInnerLayout"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
+        android:layout_height="0dp"
         android:background="@color/md_blue_800"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/mapView">
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/tvTimer"
