@@ -7,12 +7,13 @@ import java.util.*
 
 @Entity(tableName = "running_table")
 data class Run(
-    @PrimaryKey(autoGenerate = true)
-    var id: Int? = null,
     var img: Bitmap? = null,
-    //var date: Date? = null,
-    var avgSpeed: Double = 0.0,
-    var distance: Float = 0.0f,
-    var timeInSeconds: Int = 0,
+    var date: Date? = null,
+    var avgSpeedInKMH: Float = 0f,
+    var distanceInMeters: Int = 0,
+    var timeInMillis: Long = 0,
     var caloriesBurned: Int = 0
-)
+) {
+    @PrimaryKey(autoGenerate = true)
+    var id: Int? = null
+}

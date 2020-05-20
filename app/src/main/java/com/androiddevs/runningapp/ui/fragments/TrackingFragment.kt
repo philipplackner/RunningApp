@@ -2,13 +2,18 @@ package com.androiddevs.runningapp.ui.fragments
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import com.androiddevs.runningapp.R
+import com.androiddevs.runningapp.db.Run
+import com.androiddevs.runningapp.db.RunDao
+import com.androiddevs.runningapp.db.RunningDatabase
 import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_BUNDLE_KEY
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_ZOOM
@@ -22,16 +27,25 @@ import com.androiddevs.runningapp.ui.TrackingViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_tracking.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.util.*
+import javax.inject.Inject
 
 class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListener {
 
-    var map: GoogleMap? = null
+    @Inject
+    lateinit var runDao: RunDao
 
-    var isTracking = false
+    private var map: GoogleMap? = null
+
+    private var isTracking = false
+    private var curTimeInMillis = 0L
     private var pathPoints = mutableListOf<LatLng>()
 
     private lateinit var viewModel: TrackingViewModel
@@ -44,22 +58,29 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
 
         viewModel.isTracking.observe(viewLifecycleOwner, Observer {
             isTracking = it
+            if (curTimeInMillis > 0L && !isTracking) {
+                btnFinishRun.visibility = View.VISIBLE
+            } else {
+                btnFinishRun.visibility = View.GONE
+            }
             Timber.d("IsTracking is now $isTracking")
             updateLocationChecking()
         })
 
         viewModel.pathPoints.observe(viewLifecycleOwner, Observer {
+            pathPoints = it
             val polylineOptions = PolylineOptions()
                 .color(POLYLINE_COLOR)
                 .width(POLYLINE_WIDTH)
                 .addAll(it)
             map?.addPolyline(polylineOptions)
-            if(it.isNotEmpty()) {
+            if (it.isNotEmpty()) {
                 map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last(), MAP_ZOOM))
             }
         })
 
         viewModel.timeRunInSeconds.observe(viewLifecycleOwner, Observer {
+            curTimeInMillis = it
             val formattedTime = TrackingUtility.getFormattedTimeWithSeconds(it)
             tvTimer.text = formattedTime
         })
@@ -68,10 +89,13 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
             toggleRun()
         }
 
+        btnFinishRun.setOnClickListener {
+            zoomToWholeDistance()
+            saveRunToDB()
+        }
+
         mapView.getMapAsync {
-            map = it.apply {
-                setMinZoomPreference(MAP_ZOOM)
-            }
+            map = it
         }
     }
 
@@ -147,6 +171,35 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
             Timber.d("Putting empty Bundle")
         } ?: mapView.onSaveInstanceState(mapViewBundle).also {
             Timber.d("Putting non-empty bundle")
+        }
+    }
+
+    private fun zoomToWholeDistance() {
+        val bounds = LatLngBounds.Builder()
+        for (point in pathPoints) {
+            bounds.include(point)
+        }
+        val width = mapView.width
+        val height = mapView.height
+        map?.moveCamera(
+            CameraUpdateFactory.newLatLngBounds(
+                bounds.build(),
+                width,
+                height,
+                (height * 0.15).toInt()
+            )
+        )
+    }
+
+    private fun saveRunToDB() {
+        map?.snapshot { bmp ->
+            val distanceInMeters = TrackingUtility.calculateTotalDistance(pathPoints).toInt()
+            val avgSpeed = (distanceInMeters / 1000f) / (curTimeInMillis / 1000 / 60 / 60)
+            val date = Calendar.getInstance().time
+            val weight = activity?.getSharedPreferences("sharedPref", MODE_PRIVATE)?.getFloat("weight", 80f)
+            val caloriesBurned = ((distanceInMeters / 1000f) * weight!!).toInt()
+            val run = Run(bmp, date, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
+
         }
     }
 

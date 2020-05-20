@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.room.TypeConverter
 import java.io.ByteArrayOutputStream
+import java.text.SimpleDateFormat
+import java.util.*
 
 class Converters {
 
@@ -17,5 +19,17 @@ class Converters {
         val outputStream = ByteArrayOutputStream()
         bmp.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
         return outputStream.toByteArray()
+    }
+
+    @TypeConverter
+    fun toDate(dateString: String): Date? {
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy-HH:mm:ss", Locale.getDefault())
+        return dateFormat.parse(dateString)
+    }
+
+    @TypeConverter
+    fun fromDate(date: Date?): String {
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy-HH:mm:ss", Locale.getDefault())
+        return dateFormat.format(date)
     }
 }

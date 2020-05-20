@@ -1,5 +1,6 @@
 package com.androiddevs.runningapp.ui
 
+import android.location.Location
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,7 +10,7 @@ import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class TrackingViewModel: ViewModel() {
+class TrackingViewModel : ViewModel() {
 
     private var isTimerEnabled = false
     private var lapTime = 0L
@@ -21,7 +22,7 @@ class TrackingViewModel: ViewModel() {
     val timeRunInSeconds = MutableLiveData<Long>()
 
     init {
-        timeRunInSeconds.postValue(0)
+        timeRunInSeconds.postValue(0L)
         isTracking.postValue(false)
         pathPoints.postValue(mutableListOf())
     }
@@ -29,7 +30,7 @@ class TrackingViewModel: ViewModel() {
     fun toggleRun() {
         val newIsTracking = !isTracking.value!!
         isTracking.postValue(newIsTracking)
-        if(newIsTracking) {
+        if (newIsTracking) {
             startTimer()
         } else {
             stopTimer()
@@ -40,7 +41,7 @@ class TrackingViewModel: ViewModel() {
         timeStarted = System.currentTimeMillis()
         isTimerEnabled = true
         viewModelScope.launch {
-            while(isTimerEnabled) {
+            while (isTimerEnabled) {
                 lapTime = System.currentTimeMillis() - timeStarted
                 timeRunInSeconds.postValue(timeRun + lapTime)
                 delay(TIMER_UPDATE_INTERVAL)

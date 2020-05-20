@@ -15,16 +15,16 @@ interface RunDao {
     //@Query("SELECT * FROM running_table ORDER BY date")
     //fun getAllRuns(): LiveData<List<Run>>
 
-    @Query("SELECT * FROM running_table ORDER BY timeInSeconds")
+    @Query("SELECT * FROM running_table ORDER BY timeInMillis")
     fun getAllRunsSortedByTimeInMin(): LiveData<List<Run>>
 
     @Query("SELECT * FROM running_table ORDER BY caloriesBurned")
     fun getAllRunsSortedByCaloriesBurned(): LiveData<List<Run>>
 
-    @Query("SELECT * FROM running_table ORDER BY distance")
+    @Query("SELECT * FROM running_table ORDER BY distanceInMeters")
     fun getAllRunsSortedByDistance(): LiveData<List<Run>>
 
-    @Query("SELECT * FROM running_table ORDER BY avgSpeed")
+    @Query("SELECT * FROM running_table ORDER BY avgSpeedInKMH")
     fun getAllRunsSortedByAvgSpeed(): LiveData<List<Run>>
 
 }
