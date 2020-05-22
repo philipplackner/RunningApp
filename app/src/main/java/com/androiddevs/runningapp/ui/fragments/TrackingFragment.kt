@@ -1,12 +1,9 @@
 package com.androiddevs.runningapp.ui.fragments
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
@@ -14,15 +11,14 @@ import androidx.lifecycle.Observer
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.db.Run
 import com.androiddevs.runningapp.db.RunDao
-import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_BUNDLE_KEY
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_ZOOM
-import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_DISTANCE
-import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
 import com.androiddevs.runningapp.other.TrackingUtility
+import com.androiddevs.runningapp.services.ACTION_PAUSE_SERVICE
 import com.androiddevs.runningapp.services.ACTION_START_SERVICE
+import com.androiddevs.runningapp.services.ACTION_STOP_SERVICE
 import com.androiddevs.runningapp.services.TrackingService
 import com.androiddevs.runningapp.ui.HomeActivity
 import com.androiddevs.runningapp.ui.TrackingViewModel
@@ -38,7 +34,7 @@ import java.util.*
 import javax.inject.Inject
 import kotlin.math.round
 
-class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListener {
+class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
     @Inject
     lateinit var runDao: RunDao
@@ -57,7 +53,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
         mapView.onCreate(mapViewBundle)
         viewModel = (activity as HomeActivity).trackingViewModel
 
-        viewModel.isTracking.observe(viewLifecycleOwner, Observer {
+        TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
             isTracking = it
             if (curTimeInMillis > 0L && !isTracking) {
                 btnFinishRun.visibility = View.VISIBLE
@@ -65,10 +61,10 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
                 btnFinishRun.visibility = View.GONE
             }
             Timber.d("IsTracking is now $isTracking")
-            updateLocationChecking()
+            //updateLocationChecking()
         })
 
-        viewModel.pathPoints.observe(viewLifecycleOwner, Observer {
+        TrackingService.pathPoints.observe(viewLifecycleOwner, Observer {
             pathPoints = it
             val polylineOptions = PolylineOptions()
                 .color(POLYLINE_COLOR)
@@ -80,7 +76,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
             }
         })
 
-        viewModel.timeRunInSeconds.observe(viewLifecycleOwner, Observer {
+        TrackingService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
             curTimeInMillis = it
             val formattedTime = TrackingUtility.getFormattedStopWatchTimeWithMillis(it)
             tvTimer.text = formattedTime
@@ -101,62 +97,29 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
     }
 
     @SuppressLint("MissingPermission")
-    private fun updateLocationChecking() {
-        val locationManager =
-            activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (isTracking) {
-            if (TrackingUtility.hasLocationPermissions(requireContext())) {
-                locationManager.requestLocationUpdates(
-                    LOCATION_PROVIDER,
-                    MIN_LOCATION_UPDATE_INTERVAL,
-                    MIN_LOCATION_UPDATE_DISTANCE,
-                    this
-                )
-                btnToggleRun.text = "Stop"
-                Timber.d("Tracking started")
-
-                Intent(activity, TrackingService::class.java).also {
-                    it.action = ACTION_START_SERVICE
-                    activity?.startService(it)
-                    Timber.d("Started service!")
-                }
-            } else {
-                Snackbar.make(
-                    requireView(),
-                    "Please accept the location permissions first",
-                    Snackbar.LENGTH_LONG
-                ).show()
-            }
-
-        } else {
-            locationManager.removeUpdates(this)
-            btnToggleRun.text = "Start"
-            Timber.d("Tracking stopped")
-        }
-    }
-
-    override fun onLocationChanged(newLocation: Location?) {
-        if (isTracking) {
-            addPathPoint(newLocation)
-            Timber.d("Location changed: (${newLocation?.latitude}, ${newLocation?.longitude})")
-        }
-    }
-
-    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-        Timber.d("Status changed: $status")
-    }
-
-    override fun onProviderEnabled(provider: String?) {
-        Timber.d("Provider enabled: $provider")
-    }
-
-    override fun onProviderDisabled(provider: String?) {
-        Timber.d("Provider disabled: $provider")
-    }
-
-    @SuppressLint("MissingPermission")
     private fun toggleRun() {
-        viewModel.toggleRun()
+        if(isTracking) {
+            btnToggleRun.text = "Start"
+            pauseTrackingService()
+        } else {
+            btnToggleRun.text = "Stop"
+            startTrackingService()
+        }
+    }
+
+    private fun startTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
+        it.action = ACTION_START_SERVICE
+        requireActivity().startService(it)
+    }
+
+    private fun pauseTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
+        it.action = ACTION_PAUSE_SERVICE
+        requireActivity().startService(it)
+    }
+
+    private fun stopTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
+        it.action = ACTION_STOP_SERVICE
+        requireActivity().startService(it)
     }
 
     private fun addPathPoint(location: Location?) {

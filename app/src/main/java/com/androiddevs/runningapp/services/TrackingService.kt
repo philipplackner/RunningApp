@@ -1,5 +1,6 @@
 package com.androiddevs.runningapp.services
 
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.NotificationManager.*
@@ -7,20 +8,28 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.MutableLiveData
 import com.androiddevs.runningapp.R
+import com.androiddevs.runningapp.other.Constants
+import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
+import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_DISTANCE
+import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
+import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.ui.HomeActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.*
 import timber.log.Timber
 
 private const val CHANNEL_ID = "tracking_channel"
+private const val NOTIFICATION_ID = 0
 
 private const val SERVICE_ID = 0
 
@@ -28,11 +37,36 @@ const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
 const val ACTION_PAUSE_SERVICE = "ACTION_PAUSE_SERVICE"
 const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
 
-class TrackingService : Service() {
+class TrackingService : Service(), LocationListener {
 
-    override fun onBind(p0: Intent?): IBinder? {
-        return null
+    companion object {
+        val timeRunInMillis = MutableLiveData<Long>()
+        val isTracking = MutableLiveData<Boolean>()
+        val pathPoints = MutableLiveData<MutableList<LatLng>>()
     }
+    private var isTimerEnabled = false
+    private var lapTime = 0L
+    private var timeRun = 0L
+    private var timeStarted = 0L
+
+    private val timeRunInSeconds = MutableLiveData<Long>()
+    private var lastSecondTimestamp = 0L
+
+    init {
+        timeRunInMillis.postValue(0L)
+        isTracking.postValue(false)
+        pathPoints.postValue(mutableListOf())
+        timeRunInSeconds.postValue(0L)
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        isTracking.observeForever {
+            updateLocationChecking()
+        }
+    }
+
+    override fun onBind(p0: Intent?): IBinder? = null
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -43,6 +77,8 @@ class TrackingService : Service() {
                 }
                 ACTION_PAUSE_SERVICE -> {
                     Timber.d("Paused Service")
+                    pauseTimer()
+                    isTracking.postValue(false)
                 }
                 ACTION_STOP_SERVICE -> {
                     Timber.d("Stopped service.")
@@ -51,6 +87,82 @@ class TrackingService : Service() {
             }
         }
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun updateLocationChecking() {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (isTracking.value!!) {
+            if (TrackingUtility.hasLocationPermissions(this)) {
+                locationManager.requestLocationUpdates(
+                    LOCATION_PROVIDER,
+                    MIN_LOCATION_UPDATE_INTERVAL,
+                    MIN_LOCATION_UPDATE_DISTANCE,
+                    this
+                )
+                Timber.d("Tracking started")
+            } else {
+                /*Snackbar.make(
+                    requireView(),
+                    "Please accept the location permissions first",
+                    Snackbar.LENGTH_LONG
+                ).show()*/
+            }
+
+        } else {
+            locationManager.removeUpdates(this)
+            Timber.d("Tracking stopped")
+        }
+    }
+
+    private fun startTimer() {
+        timeStarted = System.currentTimeMillis()
+        isTimerEnabled = true
+        CoroutineScope(Dispatchers.Main).launch {
+            while (isTimerEnabled) {
+                lapTime = System.currentTimeMillis() - timeStarted
+                timeRunInMillis.postValue(timeRun + lapTime)
+                if(timeRunInMillis.value!! >= lastSecondTimestamp + 1000L) {
+                    timeRunInSeconds.postValue(timeRunInSeconds.value!! + 1)
+                    lastSecondTimestamp += 1000L
+                }
+                delay(Constants.TIMER_UPDATE_INTERVAL)
+            }
+            timeRun += lapTime
+        }
+    }
+
+    private fun pauseTimer() {
+        isTimerEnabled = false
+    }
+
+    private fun addPathPoint(location: Location?) {
+        location?.let {
+            val pos = LatLng(location.latitude, location.longitude)
+            pathPoints.value?.apply {
+                add(pos)
+                pathPoints.postValue(this)
+            }
+        }
+    }
+
+    override fun onLocationChanged(newLocation: Location?) {
+        if (isTracking.value!!) {
+            addPathPoint(newLocation)
+            Timber.d("Location changed: (${newLocation?.latitude}, ${newLocation?.longitude})")
+        }
+    }
+
+    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+        Timber.d("Status changed: $status")
+    }
+
+    override fun onProviderEnabled(provider: String?) {
+        Timber.d("Provider enabled: $provider")
+    }
+
+    override fun onProviderDisabled(provider: String?) {
+        Timber.d("Provider disabled: $provider")
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -81,12 +193,18 @@ class TrackingService : Service() {
             .setContentTitle("Running App")
 
         var notification = notificationBuilder
-            .setContentText("00:00")
+            .setContentText("00:00:00")
 
         startForeground(SERVICE_ID, notification.build())
-        notificationManager.notify(0, notification.build())
+        notificationManager.notify(NOTIFICATION_ID, notification.build())
+        startTimer()
+        isTracking.postValue(true)
 
-
+        timeRunInSeconds.observeForever {
+            notification = notificationBuilder
+                .setContentText(TrackingUtility.getFormattedPreviewTimeWithMillis(it * 1000L))
+            notificationManager.notify(NOTIFICATION_ID, notification.build())
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
