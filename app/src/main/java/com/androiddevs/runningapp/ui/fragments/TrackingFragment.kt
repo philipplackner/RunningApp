@@ -3,6 +3,7 @@ package com.androiddevs.runningapp.ui.fragments
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
+import android.content.Intent
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -10,11 +11,9 @@ import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
 import androidx.lifecycle.Observer
-import androidx.lifecycle.lifecycleScope
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.db.Run
 import com.androiddevs.runningapp.db.RunDao
-import com.androiddevs.runningapp.db.RunningDatabase
 import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_BUNDLE_KEY
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_ZOOM
@@ -23,6 +22,8 @@ import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
 import com.androiddevs.runningapp.other.TrackingUtility
+import com.androiddevs.runningapp.services.ACTION_START_SERVICE
+import com.androiddevs.runningapp.services.TrackingService
 import com.androiddevs.runningapp.ui.HomeActivity
 import com.androiddevs.runningapp.ui.TrackingViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -32,8 +33,6 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_tracking.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.*
 import javax.inject.Inject
@@ -83,7 +82,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
 
         viewModel.timeRunInSeconds.observe(viewLifecycleOwner, Observer {
             curTimeInMillis = it
-            val formattedTime = TrackingUtility.getFormattedTimeWithSeconds(it)
+            val formattedTime = TrackingUtility.getFormattedStopWatchTimeWithMillis(it)
             tvTimer.text = formattedTime
         })
 
@@ -115,6 +114,12 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking), LocationListe
                 )
                 btnToggleRun.text = "Stop"
                 Timber.d("Tracking started")
+
+                Intent(activity, TrackingService::class.java).also {
+                    it.action = ACTION_START_SERVICE
+                    activity?.startService(it)
+                    Timber.d("Started service!")
+                }
             } else {
                 Snackbar.make(
                     requireView(),

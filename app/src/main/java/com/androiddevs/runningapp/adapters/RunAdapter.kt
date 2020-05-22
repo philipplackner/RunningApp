@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.ItemTouchHelper.*
 import androidx.recyclerview.widget.RecyclerView
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.db.Run
+import com.androiddevs.runningapp.other.TrackingUtility
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.item_run.view.*
 import java.text.SimpleDateFormat
@@ -57,7 +58,7 @@ class RunAdapter: RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
             }
             tvAvgSpeed.text = "${run.avgSpeedInKMH}km/h"
             tvDistance.text = "${run.distanceInMeters / 1000f}km"
-            tvTime.text = "${run.timeInMillis / 1000f / 60f}min"
+            tvTime.text = TrackingUtility.getFormattedPreviewTimeWithMillis(run.timeInMillis)
             tvCalories.text = "${run.caloriesBurned}kcal"
         }
     }
