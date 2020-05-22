@@ -1,6 +1,7 @@
 package com.androiddevs.runningapp.ui.fragments
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -13,6 +14,7 @@ import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.adapters.RunAdapter
 import com.androiddevs.runningapp.ui.HomeActivity
 import com.androiddevs.runningapp.ui.HomeViewModel
+import com.androiddevs.runningapp.ui.TrackingActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_run.*
 import pub.devrel.easypermissions.AppSettingsDialog
@@ -34,7 +36,10 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
         setupRecyclerView()
         requestPermissions()
         fab.setOnClickListener {
-            findNavController().navigate(R.id.action_runFragment2_to_trackingFragment)
+            //findNavController().navigate(R.id.action_runFragment2_to_trackingFragment)
+            Intent(requireContext(), TrackingActivity::class.java).also {
+                startActivity(it)
+            }
         }
 
         viewModel.getAllRunsSortedByDistance().observe(viewLifecycleOwner, Observer { runs ->
@@ -96,6 +101,7 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
                     "You need to accept location permissions to use this app",
                     REQUEST_CODE_LOCATION_PERMISSION,
                     Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
                     Manifest.permission.ACCESS_BACKGROUND_LOCATION
                 )
             }

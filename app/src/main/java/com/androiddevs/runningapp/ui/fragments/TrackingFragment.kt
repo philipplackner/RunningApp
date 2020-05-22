@@ -21,6 +21,7 @@ import com.androiddevs.runningapp.services.ACTION_START_SERVICE
 import com.androiddevs.runningapp.services.ACTION_STOP_SERVICE
 import com.androiddevs.runningapp.services.TrackingService
 import com.androiddevs.runningapp.ui.HomeActivity
+import com.androiddevs.runningapp.ui.TrackingActivity
 import com.androiddevs.runningapp.ui.TrackingViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -51,7 +52,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         super.onViewCreated(view, savedInstanceState)
         val mapViewBundle = savedInstanceState?.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapView.onCreate(mapViewBundle)
-        viewModel = (activity as HomeActivity).trackingViewModel
+        viewModel = (activity as TrackingActivity).trackingViewModel
 
         TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
             isTracking = it
@@ -168,8 +169,8 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             Timber.d("curTimeInMillis: $curTimeInMillis")
             val avgSpeed = round((distanceInMeters / 1000f) / (curTimeInMillis / 1000f / 60 / 60) * 10) / 10f
             val date = Calendar.getInstance().time
-            val weight = activity?.getSharedPreferences("sharedPref", MODE_PRIVATE)?.getFloat("weight", 80f)
-            val caloriesBurned = ((distanceInMeters / 1000f) * weight!!).toInt()
+            val weight = requireContext().getSharedPreferences("sharedPref", MODE_PRIVATE).getFloat("weight", 80f)
+            val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
             val run = Run(bmp, date, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
             viewModel.insertRun(run)
             Snackbar.make(requireView(), "Run saved successfully.", Snackbar.LENGTH_LONG).show()
