@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
-import android.location.Location
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
@@ -18,7 +17,7 @@ import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.services.ACTION_PAUSE_SERVICE
-import com.androiddevs.runningapp.services.ACTION_START_SERVICE
+import com.androiddevs.runningapp.services.ACTION_START_OR_RESUME_SERVICE
 import com.androiddevs.runningapp.services.ACTION_STOP_SERVICE
 import com.androiddevs.runningapp.services.TrackingService
 import com.androiddevs.runningapp.ui.HomeActivity
@@ -30,10 +29,6 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_tracking.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.*
 import javax.inject.Inject
@@ -90,7 +85,6 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
                     btnFinishRun.visibility = View.GONE
                 }
                 Timber.d("IsTracking is now $isTracking")
-                //updateLocationChecking()
             })
 
             service.pathPoints.observe(viewLifecycleOwner, Observer {
@@ -120,12 +114,12 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             pauseTrackingService()
         } else {
             btnToggleRun.text = "Stop"
-            startTrackingService()
+            startOrResumeTrackingService()
         }
     }
 
-    private fun startTrackingService() = Intent(requireActivity(), TrackingService::class.java).also {
-        it.action = ACTION_START_SERVICE
+    private fun startOrResumeTrackingService() = Intent(requireActivity(), TrackingService::class.java).also {
+        it.action = ACTION_START_OR_RESUME_SERVICE
         requireActivity().startService(it)
         bindService()
     }
@@ -138,17 +132,6 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     private fun stopTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
         it.action = ACTION_STOP_SERVICE
         requireActivity().startService(it)
-    }
-
-    private fun addPathPoint(location: Location?) {
-        location?.let {
-            val pos = LatLng(location.latitude, location.longitude)
-            if (pathPoints.isEmpty()) {
-                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(pos, MAP_ZOOM))
-            }
-
-            //viewModel.addPathPoint(pos)
-        }
     }
 
     private fun bindService() {

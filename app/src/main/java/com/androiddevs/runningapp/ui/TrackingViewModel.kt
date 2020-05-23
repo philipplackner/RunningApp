@@ -22,10 +22,6 @@ class TrackingViewModel @Inject constructor(
     val homeRepository: HomeRepository
 ) : ViewModel() {
 
-    val isTracking = MutableLiveData<Boolean>()
-    val pathPoints = MutableLiveData<MutableList<LatLng>>()
-    val timeRunInSeconds = MutableLiveData<Long>()
-
     val trackingBinder = MutableLiveData<TrackingService.TrackingBinder>()
 
     val serviceConnection = object : ServiceConnection {
@@ -38,12 +34,6 @@ class TrackingViewModel @Inject constructor(
             Timber.d("$componentName connected to service")
             trackingBinder.postValue(binder as TrackingService.TrackingBinder)
         }
-    }
-
-    init {
-        timeRunInSeconds.postValue(0L)
-        isTracking.postValue(false)
-        pathPoints.postValue(mutableListOf())
     }
 
     fun insertRun(run: Run) = viewModelScope.launch {

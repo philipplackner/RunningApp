@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -22,7 +23,6 @@ import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.ui.HomeActivity
-import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -32,7 +32,7 @@ private const val NOTIFICATION_ID = 1
 
 private const val SERVICE_ID = 1
 
-const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
+const val ACTION_START_OR_RESUME_SERVICE = "ACTION_START_SERVICE"
 const val ACTION_PAUSE_SERVICE = "ACTION_PAUSE_SERVICE"
 const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
 
@@ -56,6 +56,15 @@ class TrackingService : Service(), LocationListener {
         val service = this@TrackingService
     }
 
+    private val baseNotificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setAutoCancel(false)
+        .setOngoing(true)
+        .setSmallIcon(R.drawable.ic_directions_run_black_24dp)
+        .setContentTitle("Running App")
+        .setContentText("00:00:00")
+
+    private var curNotification = baseNotificationBuilder
+
     init {
         timeRunInMillis.postValue(0L)
         isTracking.postValue(false)
@@ -66,7 +75,8 @@ class TrackingService : Service(), LocationListener {
     override fun onCreate() {
         super.onCreate()
         isTracking.observeForever {
-            updateLocationChecking()
+            updateCurNotification(it)
+            updateLocationChecking(it)
         }
     }
 
@@ -76,13 +86,12 @@ class TrackingService : Service(), LocationListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
             when (it.action) {
-                ACTION_START_SERVICE -> {
+                ACTION_START_OR_RESUME_SERVICE -> {
                     startForegroundService()
                 }
                 ACTION_PAUSE_SERVICE -> {
                     Timber.d("Paused Service")
-                    pauseTimer()
-                    isTracking.postValue(false)
+                    pauseService()
                 }
                 ACTION_STOP_SERVICE -> {
                     Timber.d("Stopped service.")
@@ -94,9 +103,9 @@ class TrackingService : Service(), LocationListener {
     }
 
     @SuppressLint("MissingPermission")
-    private fun updateLocationChecking() {
+    private fun updateLocationChecking(isTracking: Boolean) {
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (isTracking.value!!) {
+        if (isTracking) {
             if (TrackingUtility.hasLocationPermissions(this)) {
                 locationManager.requestLocationUpdates(
                     LOCATION_PROVIDER,
@@ -129,8 +138,9 @@ class TrackingService : Service(), LocationListener {
         }
     }
 
-    private fun pauseTimer() {
+    private fun pauseService() {
         isTimerEnabled = false
+        isTracking.postValue(false)
     }
 
     private fun addPathPoint(location: Location?) {
@@ -162,18 +172,8 @@ class TrackingService : Service(), LocationListener {
         Timber.d("Provider disabled: $provider")
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun startForegroundService() {
         Timber.d("TrackingService started.")
-        val intent = Intent(this, HomeActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent, 0)
-
-        val pauseIntent = Intent(ACTION_PAUSE_SERVICE)
-        val pausePendingIntent = PendingIntent.getService(this, 1, pauseIntent, 0)
-
-        val stopIntent = Intent(ACTION_STOP_SERVICE)
-        val stopPendingIntent = PendingIntent.getService(this, 2, stopIntent, 0)
-
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -181,29 +181,51 @@ class TrackingService : Service(), LocationListener {
             createNotificationChannel(notificationManager)
         }
 
-        val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(false)
-            .setOngoing(true)
-            .setSmallIcon(R.drawable.ic_directions_run_black_24dp)
-            .addAction(R.drawable.ic_pause_black_24dp, "Pause", pausePendingIntent)
-            .addAction(R.drawable.ic_stop_black_24dp, "Stop", stopPendingIntent)
-            .setContentTitle("Running App")
-
-        var notification = notificationBuilder
-            .setContentText("00:00:00")
-
-        startForeground(SERVICE_ID, notification.build())
-        notificationManager.notify(NOTIFICATION_ID, notification.build())
+        startForeground(NOTIFICATION_ID, curNotification.build())
         startTimer()
         isTracking.postValue(true)
 
         // updating notification
         timeRunInSeconds.observeForever {
-            notification = notificationBuilder
+            val notification = curNotification
                 .setContentText(TrackingUtility.getFormattedPreviewTimeWithMillis(it * 1000L))
             notificationManager.notify(NOTIFICATION_ID, notification.build())
         }
+    }
+
+    private fun getActivityPendingIntent() = PendingIntent.getActivity(
+        this,
+        0,
+        Intent(this, HomeActivity::class.java).apply {
+            flags = FLAG_ACTIVITY_NEW_TASK
+        },
+        0
+    )
+
+    private fun updateCurNotification(isTracking: Boolean) {
+        val notificationActionText = if (isTracking) "Pause" else "Resume"
+        val pendingIntent = if (isTracking) {
+            val pauseIntent = Intent(this, TrackingService::class.java).apply {
+                action = ACTION_PAUSE_SERVICE
+            }
+            PendingIntent.getService(this, 1, pauseIntent, 0)
+        } else {
+            val resumeIntent = Intent(this, TrackingService::class.java).apply {
+                action = ACTION_START_OR_RESUME_SERVICE
+            }
+            PendingIntent.getService(this, 2, resumeIntent, 0)
+        }
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val field = curNotification.javaClass.getDeclaredField("mActions")
+        field.isAccessible = true
+        field.set(curNotification, ArrayList<NotificationCompat.Action>())
+
+        curNotification = baseNotificationBuilder
+            .setContentIntent(getActivityPendingIntent())
+            .addAction(R.drawable.ic_pause_black_24dp, notificationActionText, pendingIntent)
+        notificationManager.notify(NOTIFICATION_ID, curNotification.build())
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
