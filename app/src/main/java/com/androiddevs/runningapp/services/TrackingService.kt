@@ -14,6 +14,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.Looper
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
@@ -24,14 +25,15 @@ import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.ui.HomeActivity
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.*
 import timber.log.Timber
 
 private const val CHANNEL_ID = "tracking_channel"
-private const val NOTIFICATION_ID = 0
+private const val NOTIFICATION_ID = 1
 
-private const val SERVICE_ID = 0
+private const val SERVICE_ID = 1
 
 const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
 const val ACTION_PAUSE_SERVICE = "ACTION_PAUSE_SERVICE"
@@ -44,6 +46,7 @@ class TrackingService : Service(), LocationListener {
         val isTracking = MutableLiveData<Boolean>()
         val pathPoints = MutableLiveData<MutableList<LatLng>>()
     }
+
     private var isTimerEnabled = false
     private var lapTime = 0L
     private var timeRun = 0L
@@ -51,6 +54,8 @@ class TrackingService : Service(), LocationListener {
 
     private val timeRunInSeconds = MutableLiveData<Long>()
     private var lastSecondTimestamp = 0L
+
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     init {
         timeRunInMillis.postValue(0L)
@@ -64,6 +69,9 @@ class TrackingService : Service(), LocationListener {
         isTracking.observeForever {
             updateLocationChecking()
         }
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
     }
 
     override fun onBind(p0: Intent?): IBinder? = null
@@ -71,7 +79,7 @@ class TrackingService : Service(), LocationListener {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
-            when(it.action) {
+            when (it.action) {
                 ACTION_START_SERVICE -> {
                     startForegroundService()
                 }
@@ -94,12 +102,31 @@ class TrackingService : Service(), LocationListener {
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         if (isTracking.value!!) {
             if (TrackingUtility.hasLocationPermissions(this)) {
-                locationManager.requestLocationUpdates(
+                /*locationManager.requestLocationUpdates(
                     LOCATION_PROVIDER,
                     MIN_LOCATION_UPDATE_INTERVAL,
                     MIN_LOCATION_UPDATE_DISTANCE,
                     this
+                )*/
+                fusedLocationClient.requestLocationUpdates(
+                    LocationRequest().apply {
+                        interval = 10000L
+                        fastestInterval = 1000L
+                        priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+                    },
+                    object : LocationCallback() {
+                        override fun onLocationResult(result: LocationResult?) {
+                            super.onLocationResult(result)
+                            result ?: return
+                            Timber.d("${result.locations.size} new locations")
+                            for(location in result.locations) {
+                                Timber.d("New Location: $location")
+                            }
+                        }
+                    },
+                    Looper.getMainLooper()
                 )
+
                 Timber.d("Tracking started")
             } else {
                 /*Snackbar.make(
@@ -110,7 +137,7 @@ class TrackingService : Service(), LocationListener {
             }
 
         } else {
-            locationManager.removeUpdates(this)
+            //locationManager.removeUpdates(this)
             Timber.d("Tracking stopped")
         }
     }
@@ -122,7 +149,7 @@ class TrackingService : Service(), LocationListener {
             while (isTimerEnabled) {
                 lapTime = System.currentTimeMillis() - timeStarted
                 timeRunInMillis.postValue(timeRun + lapTime)
-                if(timeRunInMillis.value!! >= lastSecondTimestamp + 1000L) {
+                if (timeRunInMillis.value!! >= lastSecondTimestamp + 1000L) {
                     timeRunInSeconds.postValue(timeRunInSeconds.value!! + 1)
                     lastSecondTimestamp += 1000L
                 }
@@ -154,6 +181,7 @@ class TrackingService : Service(), LocationListener {
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+
         Timber.d("Status changed: $status")
     }
 
@@ -177,9 +205,10 @@ class TrackingService : Service(), LocationListener {
         val stopIntent = Intent(ACTION_STOP_SERVICE)
         val stopPendingIntent = PendingIntent.getService(this, 2, stopIntent, 0)
 
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel(notificationManager)
         }
 
@@ -195,6 +224,7 @@ class TrackingService : Service(), LocationListener {
         var notification = notificationBuilder
             .setContentText("00:00:00")
 
+        val notificationBuild = notification.build()
         startForeground(SERVICE_ID, notification.build())
         notificationManager.notify(NOTIFICATION_ID, notification.build())
         startTimer()
