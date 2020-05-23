@@ -19,8 +19,7 @@ class SetupFragment : BaseFragment(R.layout.fragment_setup) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         tvContinue.setOnClickListener {
-            findNavController().navigate(R.id.action_setupFragment_to_homeActivity)
-            activity?.finish()
+            findNavController().navigate(R.id.action_setupFragment2_to_runFragment2)
         }
     }
 }

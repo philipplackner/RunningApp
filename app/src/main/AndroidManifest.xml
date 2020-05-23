@@ -15,11 +15,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".ui.TrackingActivity"></activity>
-        <activity
-            android:name=".ui.HomeActivity"
-            android:noHistory="true" />
-        <activity android:name=".ui.SetupActivity">
+        <activity android:name=".ui.HomeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

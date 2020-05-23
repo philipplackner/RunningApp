@@ -14,7 +14,6 @@ import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.adapters.RunAdapter
 import com.androiddevs.runningapp.ui.HomeActivity
 import com.androiddevs.runningapp.ui.HomeViewModel
-import com.androiddevs.runningapp.ui.TrackingActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_run.*
 import pub.devrel.easypermissions.AppSettingsDialog

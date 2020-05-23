@@ -21,7 +21,6 @@ import com.androiddevs.runningapp.services.ACTION_START_SERVICE
 import com.androiddevs.runningapp.services.ACTION_STOP_SERVICE
 import com.androiddevs.runningapp.services.TrackingService
 import com.androiddevs.runningapp.ui.HomeActivity
-import com.androiddevs.runningapp.ui.TrackingActivity
 import com.androiddevs.runningapp.ui.TrackingViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -52,7 +51,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         super.onViewCreated(view, savedInstanceState)
         val mapViewBundle = savedInstanceState?.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapView.onCreate(mapViewBundle)
-        viewModel = (activity as TrackingActivity).trackingViewModel
+        viewModel = (activity as HomeActivity).trackingViewModel
 
         TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
             isTracking = it
