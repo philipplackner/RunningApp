@@ -1,6 +1,7 @@
 package com.androiddevs.runningapp.ui.fragments
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.location.Location
@@ -29,6 +30,10 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_tracking.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.*
 import javax.inject.Inject
@@ -47,13 +52,22 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
     private lateinit var viewModel: TrackingViewModel
 
+    private var trackingService: TrackingService? = null
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val mapViewBundle = savedInstanceState?.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapView.onCreate(mapViewBundle)
         viewModel = (activity as HomeActivity).trackingViewModel
 
-        TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
+        viewModel.trackingBinder.observe(viewLifecycleOwner, Observer {
+            trackingService = it.service
+            Timber.d("GOT A NEW BINDER: ${it.service}")
+        })
+
+
+
+        /*TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
             isTracking = it
             if (curTimeInMillis > 0L && !isTracking) {
                 btnFinishRun.visibility = View.VISIBLE
@@ -80,7 +94,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             curTimeInMillis = it
             val formattedTime = TrackingUtility.getFormattedStopWatchTimeWithMillis(it)
             tvTimer.text = formattedTime
-        })
+        })*/
 
         btnToggleRun.setOnClickListener {
             toggleRun()
@@ -107,9 +121,10 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         }
     }
 
-    private fun startTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
+    private fun startTrackingService() = Intent(requireActivity(), TrackingService::class.java).also {
         it.action = ACTION_START_SERVICE
         requireActivity().startService(it)
+        bindService()
     }
 
     private fun pauseTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
@@ -129,8 +144,13 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
                 map?.animateCamera(CameraUpdateFactory.newLatLngZoom(pos, MAP_ZOOM))
             }
 
-            viewModel.addPathPoint(pos)
+            //viewModel.addPathPoint(pos)
         }
+    }
+
+    private fun bindService() {
+        val serviceBindIntent = Intent(requireActivity(), TrackingService::class.java)
+        requireActivity().bindService(serviceBindIntent, viewModel.serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -194,6 +214,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     override fun onStop() {
         super.onStop()
         mapView.onStop()
+        requireActivity().unbindService(viewModel.serviceConnection)
     }
 
     override fun onLowMemory() {

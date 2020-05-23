@@ -1,5 +1,7 @@
 package com.androiddevs.runningapp.ui
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.ViewModel
@@ -11,6 +13,7 @@ import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.di.ViewModelProviderFactory
+import com.androiddevs.runningapp.services.TrackingService
 import dagger.android.support.DaggerAppCompatActivity
 import kotlinx.android.synthetic.main.activity_home.*
 import pub.devrel.easypermissions.EasyPermissions
