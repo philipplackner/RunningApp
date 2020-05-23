@@ -60,41 +60,11 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         mapView.onCreate(mapViewBundle)
         viewModel = (activity as HomeActivity).trackingViewModel
 
-        viewModel.trackingBinder.observe(viewLifecycleOwner, Observer {
-            trackingService = it.service
-            Timber.d("GOT A NEW BINDER: ${it.service}")
+        viewModel.trackingBinder.observe(viewLifecycleOwner, Observer { trackingBinder ->
+            trackingService = trackingBinder.service
+            subscribeToObservers()
+            Timber.d("GOT A NEW BINDER: ${trackingBinder.service}")
         })
-
-
-
-        /*TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
-            isTracking = it
-            if (curTimeInMillis > 0L && !isTracking) {
-                btnFinishRun.visibility = View.VISIBLE
-            } else {
-                btnFinishRun.visibility = View.GONE
-            }
-            Timber.d("IsTracking is now $isTracking")
-            //updateLocationChecking()
-        })
-
-        TrackingService.pathPoints.observe(viewLifecycleOwner, Observer {
-            pathPoints = it
-            val polylineOptions = PolylineOptions()
-                .color(POLYLINE_COLOR)
-                .width(POLYLINE_WIDTH)
-                .addAll(it)
-            map?.addPolyline(polylineOptions)
-            if (it.isNotEmpty()) {
-                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last(), MAP_ZOOM))
-            }
-        })
-
-        TrackingService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
-            curTimeInMillis = it
-            val formattedTime = TrackingUtility.getFormattedStopWatchTimeWithMillis(it)
-            tvTimer.text = formattedTime
-        })*/
 
         btnToggleRun.setOnClickListener {
             toggleRun()
@@ -107,6 +77,39 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
         mapView.getMapAsync {
             map = it
+        }
+    }
+
+    private fun subscribeToObservers() {
+        trackingService?.let { service ->
+            service.isTracking.observe(viewLifecycleOwner, Observer {
+                isTracking = it
+                if (curTimeInMillis > 0L && !isTracking) {
+                    btnFinishRun.visibility = View.VISIBLE
+                } else {
+                    btnFinishRun.visibility = View.GONE
+                }
+                Timber.d("IsTracking is now $isTracking")
+                //updateLocationChecking()
+            })
+
+            service.pathPoints.observe(viewLifecycleOwner, Observer {
+                pathPoints = it
+                val polylineOptions = PolylineOptions()
+                    .color(POLYLINE_COLOR)
+                    .width(POLYLINE_WIDTH)
+                    .addAll(it)
+                map?.addPolyline(polylineOptions)
+                if (it.isNotEmpty()) {
+                    map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last(), MAP_ZOOM))
+                }
+            })
+
+            service.timeRunInMillis.observe(viewLifecycleOwner, Observer {
+                curTimeInMillis = it
+                val formattedTime = TrackingUtility.getFormattedStopWatchTimeWithMillis(it)
+                tvTimer.text = formattedTime
+            })
         }
     }
 

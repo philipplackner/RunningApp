@@ -14,7 +14,7 @@ import android.location.LocationManager
 import android.os.*
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.*
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants
 import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
