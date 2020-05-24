@@ -15,6 +15,7 @@ import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_BUNDLE_KEY
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_ZOOM
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
+import com.androiddevs.runningapp.other.MapPoint
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.services.ACTION_PAUSE_SERVICE
 import com.androiddevs.runningapp.services.ACTION_START_OR_RESUME_SERVICE
@@ -48,6 +49,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     private lateinit var viewModel: TrackingViewModel
 
     private var trackingService: TrackingService? = null
+    private var trackingBinder: TrackingService.TrackingBinder? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -55,10 +57,11 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         mapView.onCreate(mapViewBundle)
         viewModel = (activity as HomeActivity).trackingViewModel
 
+        subscribeToObservers()
+
         viewModel.trackingBinder.observe(viewLifecycleOwner, Observer { trackingBinder ->
+            this@TrackingFragment.trackingBinder = trackingBinder
             trackingService = trackingBinder.service
-            subscribeToObservers()
-            Timber.d("GOT A NEW BINDER: ${trackingBinder.service}")
         })
 
         btnToggleRun.setOnClickListener {
@@ -73,38 +76,41 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         mapView.getMapAsync {
             map = it
         }
+
+        retainInstance = false
     }
 
     private fun subscribeToObservers() {
-        trackingService?.let { service ->
-            service.isTracking.observe(viewLifecycleOwner, Observer {
-                isTracking = it
-                if (curTimeInMillis > 0L && !isTracking) {
-                    btnFinishRun.visibility = View.VISIBLE
-                } else {
-                    btnFinishRun.visibility = View.GONE
-                }
-                Timber.d("IsTracking is now $isTracking")
-            })
+        viewModel.isTracking.observe(viewLifecycleOwner, Observer {
+            isTracking = it
+            Timber.d("IsTracking is $it")
+            Timber.d("TimeRunInMillis is ${curTimeInMillis}")
+            if (curTimeInMillis > 0L && !isTracking) {
+                btnToggleRun.text = "Start"
+                btnFinishRun.visibility = View.VISIBLE
+            } else {
+                btnToggleRun.text = "Stop"
+                btnFinishRun.visibility = View.GONE
+            }
+        })
 
-            service.pathPoints.observe(viewLifecycleOwner, Observer {
-                pathPoints = it
-                val polylineOptions = PolylineOptions()
-                    .color(POLYLINE_COLOR)
-                    .width(POLYLINE_WIDTH)
-                    .addAll(it)
-                map?.addPolyline(polylineOptions)
-                if (it.isNotEmpty()) {
-                    map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last(), MAP_ZOOM))
-                }
-            })
+        viewModel.pathPoints.observe(viewLifecycleOwner, Observer {
+            pathPoints = it
+            val polylineOptions = PolylineOptions()
+                .color(POLYLINE_COLOR)
+                .width(POLYLINE_WIDTH)
+                .addAll(it)
+            map?.addPolyline(polylineOptions)
+            if (it.isNotEmpty()) {
+                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last(), MAP_ZOOM))
+            }
+        })
 
-            service.timeRunInMillis.observe(viewLifecycleOwner, Observer {
-                curTimeInMillis = it
-                val formattedTime = TrackingUtility.getFormattedStopWatchTimeWithMillis(it)
-                tvTimer.text = formattedTime
-            })
-        }
+        viewModel.timeRunInMillis.observe(viewLifecycleOwner, Observer {
+            curTimeInMillis = it
+            val formattedTime = TrackingUtility.getFormattedStopWatchTimeWithMillis(it)
+            tvTimer.text = formattedTime
+        })
     }
 
     @SuppressLint("MissingPermission")
@@ -124,7 +130,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         bindService()
     }
 
-    private fun pauseTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
+    private fun pauseTrackingService() = Intent(requireActivity(), TrackingService::class.java).also {
         it.action = ACTION_PAUSE_SERVICE
         requireActivity().startService(it)
     }
@@ -139,15 +145,47 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         requireActivity().bindService(serviceBindIntent, viewModel.serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+
+        savedInstanceState?.let { state ->
+            Timber.d("SavedInstanceState is not null")
+            if(state.containsKey("isTracking")) {
+                isTracking = state.getBoolean("isTracking")
+                Timber.d("Updated isTracking with $isTracking")
+            }
+            if(state.containsKey("curTimeInMillis")) {
+                curTimeInMillis = state.getLong("curTimeInMillis")
+            }
+            if(state.containsKey("binder")) {
+                trackingBinder = state.getBinder("binder") as TrackingService.TrackingBinder
+            }
+            if(state.containsKey("pathPoints")) {
+                pathPoints = state.getParcelableArray("pathPoints")?.map {
+                    val curPoint = (it as MapPoint)
+                    LatLng(curPoint.latitude, curPoint.longitude)
+                }?.toMutableList() ?: return
+            }
+        } ?: Timber.d("SavedInstanceState is null")
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("isTracking", isTracking)
+        outState.putBinder("binder", trackingBinder)
+        outState.putLong("curTimeInMillis", curTimeInMillis)
+        val mapPointArray = pathPoints.map { MapPoint(it.latitude, it.longitude) }.toTypedArray()
+        outState.putParcelableArray("pathPoints", mapPointArray)
+        Timber.d("PUT SOMETHING IN SAVED INSTANCE STATE")
+        arguments?.putBundle("savedState", outState)
         super.onSaveInstanceState(outState)
-        val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
+
+        /*val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapViewBundle?.let {
             outState.putBundle(MAP_VIEW_BUNDLE_KEY, Bundle())
             Timber.d("Putting empty Bundle")
         } ?: mapView.onSaveInstanceState(mapViewBundle).also {
             Timber.d("Putting non-empty bundle")
-        }
+        }*/
     }
 
     private fun zoomToWholeDistance() {
@@ -200,7 +238,11 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     override fun onStop() {
         super.onStop()
         mapView.onStop()
-        requireActivity().unbindService(viewModel.serviceConnection)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        //requireActivity().unbindService(viewModel.serviceConnection)
     }
 
     override fun onLowMemory() {

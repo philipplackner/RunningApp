@@ -5,10 +5,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.NotificationManager.*
 import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+import android.content.Intent.*
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -16,8 +17,10 @@ import android.os.*
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.*
+import androidx.navigation.NavDeepLinkBuilder
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants
+import com.androiddevs.runningapp.other.Constants.Companion.EXTRA_SHOW_TRACKING_FRAGMENT
 import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_DISTANCE
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
@@ -64,6 +67,8 @@ class TrackingService : Service(), LocationListener {
         .setContentText("00:00:00")
 
     private var curNotification = baseNotificationBuilder
+
+    private var isFirstStart = true
 
     init {
         timeRunInMillis.postValue(0L)
@@ -122,6 +127,7 @@ class TrackingService : Service(), LocationListener {
     }
 
     private fun startTimer() {
+        isTracking.postValue(true)
         timeStarted = System.currentTimeMillis()
         isTimerEnabled = true
         CoroutineScope(Dispatchers.Main).launch {
@@ -182,8 +188,10 @@ class TrackingService : Service(), LocationListener {
         }
 
         startForeground(NOTIFICATION_ID, curNotification.build())
+        curNotification = curNotification.setContentIntent(getActivityPendingIntent())
         startTimer()
         isTracking.postValue(true)
+        isFirstStart = false
 
         // updating notification
         timeRunInSeconds.observeForever {
@@ -193,13 +201,19 @@ class TrackingService : Service(), LocationListener {
         }
     }
 
+    /*private fun getActivityPendingIntent() = NavDeepLinkBuilder(this)
+        .setComponentName(HomeActivity::class.java)
+        .setGraph(R.navigation.home_nav_graph)
+        .setDestination(R.id.trackingFragment)
+        .createPendingIntent() */
+
     private fun getActivityPendingIntent() = PendingIntent.getActivity(
         this,
         0,
         Intent(this, HomeActivity::class.java).apply {
-            flags = FLAG_ACTIVITY_NEW_TASK
+            flags = FLAG_ACTIVITY_REORDER_TO_FRONT
         },
-        0
+        FLAG_UPDATE_CURRENT
     )
 
     private fun updateCurNotification(isTracking: Boolean) {
@@ -223,7 +237,6 @@ class TrackingService : Service(), LocationListener {
         field.set(curNotification, ArrayList<NotificationCompat.Action>())
 
         curNotification = baseNotificationBuilder
-            .setContentIntent(getActivityPendingIntent())
             .addAction(R.drawable.ic_pause_black_24dp, notificationActionText, pendingIntent)
         notificationManager.notify(NOTIFICATION_ID, curNotification.build())
     }
