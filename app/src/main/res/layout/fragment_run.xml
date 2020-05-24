@@ -10,6 +10,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:entries="@array/filter_options"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -19,6 +21,7 @@
         android:layout_height="wrap_content"
         android:text="Sort by:"
         android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="@+id/spFilter"
         app:layout_constraintEnd_toStartOf="@+id/spFilter"
         app:layout_constraintTop_toTopOf="parent" />
 

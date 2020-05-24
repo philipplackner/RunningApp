@@ -183,7 +183,6 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             for(polyline in pathPoints) {
                 distanceInMeters += TrackingUtility.calculateTotalDistance(polyline).toInt()
             }
-            Timber.d("curTimeInMillis: $curTimeInMillis")
             val avgSpeed = round((distanceInMeters / 1000f) / (curTimeInMillis / 1000f / 60 / 60) * 10) / 10f
             val date = Calendar.getInstance().time
             val weight = requireContext().getSharedPreferences("sharedPref", MODE_PRIVATE).getFloat("weight", 80f)

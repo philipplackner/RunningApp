@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.AdapterView
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -12,6 +14,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.adapters.RunAdapter
+import com.androiddevs.runningapp.db.Run
+import com.androiddevs.runningapp.other.SortType
 import com.androiddevs.runningapp.ui.HomeActivity
 import com.androiddevs.runningapp.ui.HomeViewModel
 import com.google.android.material.snackbar.Snackbar
@@ -41,9 +45,33 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
             }
         }
 
-        viewModel.getAllRunsSortedByDistance().observe(viewLifecycleOwner, Observer { runs ->
+        viewModel.runs.observe(viewLifecycleOwner, Observer { runs ->
             runAdapter.submitList(runs)
         })
+
+        spFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(adapterView: AdapterView<*>?) {}
+
+            override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                when(pos) {
+                    0 -> { // Date
+                        viewModel.filterRuns(SortType.DATE)
+                    }
+                    1 -> { // Running Time
+                        viewModel.filterRuns(SortType.RUNNING_TIME)
+                    }
+                    2 -> { // Distance
+                        viewModel.filterRuns(SortType.DISTANCE)
+                    }
+                    3 -> { // Average Speed
+                        viewModel.filterRuns(SortType.AVG_SPEED)
+                    }
+                    4 -> { // Calories Burned
+                        viewModel.filterRuns(SortType.CALORIES_BURNED)
+                    }
+                }
+            }
+        }
     }
 
     val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
