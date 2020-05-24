@@ -1,13 +1,13 @@
 package com.androiddevs.runningapp.ui.fragments
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.os.Bundle
 import android.util.TypedValue
-import android.view.View
+import android.view.*
 import androidx.lifecycle.Observer
+import androidx.navigation.fragment.findNavController
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.db.Run
 import com.androiddevs.runningapp.db.RunDao
@@ -15,7 +15,6 @@ import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_BUNDLE_KEY
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_ZOOM
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
-import com.androiddevs.runningapp.other.MapPoint
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.services.ACTION_PAUSE_SERVICE
 import com.androiddevs.runningapp.services.ACTION_START_OR_RESUME_SERVICE
@@ -27,9 +26,10 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.fragment_tracking.*
 import timber.log.Timber
 import java.util.*
@@ -49,8 +49,16 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
     private lateinit var viewModel: TrackingViewModel
 
-    private var trackingService: TrackingService? = null
-    private var trackingBinder: TrackingService.TrackingBinder? = null
+    private var menu: Menu? = null
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        setHasOptionsMenu(true)
+        return super.onCreateView(inflater, container, savedInstanceState)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -60,11 +68,6 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
         subscribeToObservers()
 
-        viewModel.trackingBinder.observe(viewLifecycleOwner, Observer { trackingBinder ->
-            this@TrackingFragment.trackingBinder = trackingBinder
-            trackingService = trackingBinder.service
-        })
-
         btnToggleRun.setOnClickListener {
             toggleRun()
         }
@@ -72,6 +75,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         btnFinishRun.setOnClickListener {
             zoomToWholeDistance()
             saveRunToDB()
+            stopRun()
         }
 
         mapView.getMapAsync {
@@ -80,18 +84,19 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     }
 
     private fun subscribeToObservers() {
-        viewModel.isTracking.observe(viewLifecycleOwner, Observer {
+        TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
             isTracking = it
             if (curTimeInMillis > 0L && !isTracking) {
                 btnToggleRun.text = getString(R.string.start_text)
                 btnFinishRun.visibility = View.VISIBLE
             } else if(isTracking){
                 btnToggleRun.text = getString(R.string.stop_text)
+                menu?.getItem(0)?.isVisible = true
                 btnFinishRun.visibility = View.GONE
             }
         })
 
-        viewModel.pathPoints.observe(viewLifecycleOwner, Observer {
+        TrackingService.pathPoints.observe(viewLifecycleOwner, Observer {
             pathPoints = it
             for(polyline in it) {
                 val polylineOptions = PolylineOptions()
@@ -107,7 +112,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             }
         })
 
-        viewModel.timeRunInMillis.observe(viewLifecycleOwner, Observer {
+        TrackingService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
             curTimeInMillis = it
             val formattedTime = TrackingUtility.getFormattedStopWatchTimeWithMillis(it)
             tvTimer.text = formattedTime
@@ -118,68 +123,32 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     private fun toggleRun() {
         if(isTracking) {
             btnToggleRun.text = getString(R.string.stop_text)
+            menu?.getItem(0)?.isVisible = true
             pauseTrackingService()
         } else {
             btnToggleRun.text = getString(R.string.start_text)
             startOrResumeTrackingService()
+            Timber.d("Started service")
         }
     }
 
-    private fun startOrResumeTrackingService() = Intent(requireActivity(), TrackingService::class.java).also {
+    private fun startOrResumeTrackingService() = Intent(requireContext().applicationContext, TrackingService::class.java).also {
         it.action = ACTION_START_OR_RESUME_SERVICE
-        requireActivity().applicationContext.startService(it)
-        bindService()
+        requireContext().applicationContext.startService(it)
     }
 
-    private fun pauseTrackingService() = Intent(requireActivity(), TrackingService::class.java).also {
+    private fun pauseTrackingService() = Intent(requireContext().applicationContext, TrackingService::class.java).also {
         it.action = ACTION_PAUSE_SERVICE
-        requireActivity().applicationContext.startService(it)
+        requireContext().applicationContext.startService(it)
     }
 
-    private fun stopTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
+    private fun stopTrackingService() = Intent(requireContext().applicationContext, TrackingService::class.java).also {
         it.action = ACTION_STOP_SERVICE
-        requireActivity().applicationContext.startService(it)
+        requireContext().applicationContext.startService(it)
     }
 
-    private fun bindService() {
-        val serviceBindIntent = Intent(requireActivity(), TrackingService::class.java)
-        requireContext().applicationContext.bindService(serviceBindIntent, viewModel.serviceConnection, Context.BIND_AUTO_CREATE)
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-
-        /*savedInstanceState?.let { state ->
-            Timber.d("SavedInstanceState is not null")
-            if(state.containsKey("isTracking")) {
-                isTracking = state.getBoolean("isTracking")
-                Timber.d("Updated isTracking with $isTracking")
-            }
-            if(state.containsKey("curTimeInMillis")) {
-                curTimeInMillis = state.getLong("curTimeInMillis")
-            }
-            if(state.containsKey("binder")) {
-                trackingBinder = state.getBinder("binder") as TrackingService.TrackingBinder
-            }
-            if(state.containsKey("pathPoints")) {
-                pathPoints = state.getParcelableArray("pathPoints")?.map {
-                    val curPoint = (it as MapPoint)
-                    LatLng(curPoint.latitude, curPoint.longitude)
-                }?.toMutableList() ?: return
-            }
-        } ?: Timber.d("SavedInstanceState is null")*/
-    }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        /*outState.putBoolean("isTracking", isTracking)
-        outState.putBinder("binder", trackingBinder)
-        outState.putLong("curTimeInMillis", curTimeInMillis)
-        val mapPointArray = pathPoints.map { MapPoint(it.latitude, it.longitude) }.toTypedArray()
-        outState.putParcelableArray("pathPoints", mapPointArray)
-        Timber.d("PUT SOMETHING IN SAVED INSTANCE STATE")
-        arguments?.putBundle("savedState", outState)
-        super.onSaveInstanceState(outState)*/
-
         val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapViewBundle?.let {
             outState.putBundle(MAP_VIEW_BUNDLE_KEY, Bundle())
@@ -221,8 +190,52 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
             val run = Run(bmp, date, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
             viewModel.insertRun(run)
-            Snackbar.make(requireView(), "Run saved successfully.", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(requireActivity().findViewById(R.id.rootView), "Run saved successfully.", Snackbar.LENGTH_LONG).show()
         }
+    }
+
+    private fun stopRun() {
+        stopTrackingService()
+        findNavController().navigate(R.id.action_trackingFragment_to_runFragment2)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when(item.itemId) {
+            R.id.miCancelTracking -> {
+                showCancelTrackingDialog()
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, inflater)
+        inflater.inflate(R.menu.toolbar_menu_tracking, menu)
+        this.menu = menu
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        super.onPrepareOptionsMenu(menu)
+        // just checking for isTracking doesnt trigger this when rotating the device
+        // in paused mode
+        if(curTimeInMillis > 0L) {
+            this.menu?.getItem(0)?.isVisible = true
+        }
+    }
+
+    private fun showCancelTrackingDialog() {
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Cancel the Run?")
+            .setMessage("Are you sure that you want to cancel the current run and delete its data?")
+            .setIcon(R.drawable.ic_delete_black_24dp)
+            .setPositiveButton("Yes") { _, _ ->
+                stopRun()
+            }
+            .setNegativeButton("No") { dialogInterface, _ ->
+                dialogInterface.cancel()
+            }
+            .create()
+        dialog.show()
     }
 
     override fun onResume() {
@@ -243,11 +256,6 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     override fun onStop() {
         super.onStop()
         mapView.onStop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        //requireActivity().unbindService(viewModel.serviceConnection)
     }
 
     override fun onLowMemory() {

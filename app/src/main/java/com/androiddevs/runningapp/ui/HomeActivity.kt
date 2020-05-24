@@ -1,28 +1,14 @@
 package com.androiddevs.runningapp.ui
 
-import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import androidx.activity.viewModels
-import androidx.lifecycle.SavedStateViewModelFactory
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.Navigation
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
 import com.androiddevs.runningapp.R
-import com.androiddevs.runningapp.di.ViewModelProviderFactory
-import com.androiddevs.runningapp.other.Constants
-import com.androiddevs.runningapp.other.Constants.Companion.EXTRA_SHOW_TRACKING_FRAGMENT
-import com.androiddevs.runningapp.services.TrackingService
 import dagger.android.support.DaggerAppCompatActivity
 import kotlinx.android.synthetic.main.activity_home.*
-import kotlinx.android.synthetic.main.activity_tracking.*
-import pub.devrel.easypermissions.EasyPermissions
-import timber.log.Timber
 import javax.inject.Inject
 
 class HomeActivity : DaggerAppCompatActivity() {
