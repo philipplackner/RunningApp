@@ -103,7 +103,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             }
 
             if (it.isNotEmpty() && it.last().isNotEmpty()) {
-                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last().last(), MAP_ZOOM))
+                map?.moveCamera(CameraUpdateFactory.newLatLngZoom(it.last().last(), MAP_ZOOM))
             }
         })
 
