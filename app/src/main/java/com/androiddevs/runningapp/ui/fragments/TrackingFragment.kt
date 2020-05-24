@@ -41,6 +41,9 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     @Inject
     lateinit var runDao: RunDao
 
+    @set:Inject
+    var weight: Float = 80f
+
     private var map: GoogleMap? = null
 
     private var isTracking = false
@@ -147,13 +150,12 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         requireContext().applicationContext.startService(it)
     }
 
-
     override fun onSaveInstanceState(outState: Bundle) {
         val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapViewBundle?.let {
             outState.putBundle(MAP_VIEW_BUNDLE_KEY, Bundle())
             Timber.d("Putting empty Bundle")
-        } ?: mapView.onSaveInstanceState(mapViewBundle).also {
+        } ?: mapView?.onSaveInstanceState(mapViewBundle).also {
             Timber.d("Putting non-empty bundle")
         }
     }

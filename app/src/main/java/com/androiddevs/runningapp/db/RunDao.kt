@@ -12,6 +12,7 @@ interface RunDao {
     @Delete
     suspend fun deleteRun(run: Run)
 
+    // TODO: Correct Date Ordering
     @Query("SELECT * FROM running_table ORDER BY date")
     fun getAllRunsSortedByDate(): LiveData<List<Run>>
 
