@@ -72,9 +72,13 @@ class TrackingService : Service(), LocationListener {
         isTracking.postValue(false)
         pathPoints.postValue(mutableListOf())
         timeRunInSeconds.postValue(0L)
+
         isTracking.observeForever {
             updateCurNotification(it)
             updateLocationChecking(it)
+        }
+        pathPoints.observeForever {
+            updateLocationChecking(isTracking.value!!)
         }
     }
 
@@ -103,7 +107,7 @@ class TrackingService : Service(), LocationListener {
     @SuppressLint("MissingPermission")
     private fun updateLocationChecking(isTracking: Boolean) {
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (isTracking && pathPoints.value != null && pathPoints.value?.isNotEmpty()!!) {
+        if (isTracking) {
             if (TrackingUtility.hasLocationPermissions(this)) {
                 locationManager.requestLocationUpdates(
                     LOCATION_PROVIDER,
@@ -111,11 +115,13 @@ class TrackingService : Service(), LocationListener {
                     MIN_LOCATION_UPDATE_DISTANCE,
                     this
                 )
-                Timber.d("Tracking started")
             }
         } else {
             locationManager.removeUpdates(this)
             Timber.d("Tracking stopped")
+            Timber.d("isTracking: $isTracking")
+            Timber.d("pathPoints: ${pathPoints.value}")
+            Timber.d("pathPoints.value?.isNotEmpty(): ${pathPoints.value?.isNotEmpty()}")
         }
     }
 
@@ -179,7 +185,7 @@ class TrackingService : Service(), LocationListener {
         add(mutableListOf())
         pathPoints.postValue(this)
         Timber.d("Added new polyline")
-    }
+    } ?: pathPoints.postValue(mutableListOf(mutableListOf()))
 
     private fun startForegroundService() {
         Timber.d("TrackingService started.")
@@ -203,6 +209,7 @@ class TrackingService : Service(), LocationListener {
                 .setContentText(TrackingUtility.getFormattedPreviewTimeWithMillis(it * 1000L))
             notificationManager.notify(NOTIFICATION_ID, notification.build())
         }
+        updateLocationChecking(true)
     }
 
     private fun getActivityPendingIntent() = PendingIntent.getActivity(
