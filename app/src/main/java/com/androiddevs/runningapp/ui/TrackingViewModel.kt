@@ -23,7 +23,7 @@ class TrackingViewModel @Inject constructor(
 
     var timeRunInMillis = MutableLiveData<Long>()
     var isTracking = MutableLiveData<Boolean>()
-    var pathPoints = MutableLiveData<MutableList<LatLng>>()
+    var pathPoints = MutableLiveData<MutableList<MutableList<LatLng>>>()
 
     val trackingBinder = MutableLiveData<TrackingService.TrackingBinder>()
 

@@ -9,7 +9,6 @@ import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.Intent.*
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -17,10 +16,8 @@ import android.os.*
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.*
-import androidx.navigation.NavDeepLinkBuilder
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants
-import com.androiddevs.runningapp.other.Constants.Companion.EXTRA_SHOW_TRACKING_FRAGMENT
 import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_DISTANCE
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
@@ -43,7 +40,7 @@ class TrackingService : Service(), LocationListener {
 
     val timeRunInMillis = MutableLiveData<Long>()
     val isTracking = MutableLiveData<Boolean>()
-    val pathPoints = MutableLiveData<MutableList<LatLng>>()
+    val pathPoints = MutableLiveData<MutableList<MutableList<LatLng>>>()
 
     private var isTimerEnabled = false
     private var lapTime = 0L
@@ -68,17 +65,13 @@ class TrackingService : Service(), LocationListener {
 
     private var curNotification = baseNotificationBuilder
 
-    private var isFirstStart = true
 
-    init {
+    override fun onCreate() {
+        super.onCreate()
         timeRunInMillis.postValue(0L)
         isTracking.postValue(false)
         pathPoints.postValue(mutableListOf())
         timeRunInSeconds.postValue(0L)
-    }
-
-    override fun onCreate() {
-        super.onCreate()
         isTracking.observeForever {
             updateCurNotification(it)
             updateLocationChecking(it)
@@ -110,7 +103,7 @@ class TrackingService : Service(), LocationListener {
     @SuppressLint("MissingPermission")
     private fun updateLocationChecking(isTracking: Boolean) {
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (isTracking) {
+        if (isTracking && pathPoints.value != null && pathPoints.value?.isNotEmpty()!!) {
             if (TrackingUtility.hasLocationPermissions(this)) {
                 locationManager.requestLocationUpdates(
                     LOCATION_PROVIDER,
@@ -149,11 +142,15 @@ class TrackingService : Service(), LocationListener {
         isTracking.postValue(false)
     }
 
+    private var curPolylineIndex = 0
+
     private fun addPathPoint(location: Location?) {
         location?.let {
             val pos = LatLng(location.latitude, location.longitude)
             pathPoints.value?.apply {
-                add(pos)
+                last().apply {
+                    add(pos)
+                }
                 pathPoints.postValue(this)
             }
         }
@@ -178,8 +175,16 @@ class TrackingService : Service(), LocationListener {
         Timber.d("Provider disabled: $provider")
     }
 
+    private fun addEmptyPolyline() = pathPoints.value?.apply {
+        add(mutableListOf())
+        pathPoints.postValue(this)
+        Timber.d("Added new polyline")
+    }
+
     private fun startForegroundService() {
         Timber.d("TrackingService started.")
+        addEmptyPolyline()
+
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -191,7 +196,6 @@ class TrackingService : Service(), LocationListener {
         curNotification = curNotification.setContentIntent(getActivityPendingIntent())
         startTimer()
         isTracking.postValue(true)
-        isFirstStart = false
 
         // updating notification
         timeRunInSeconds.observeForever {

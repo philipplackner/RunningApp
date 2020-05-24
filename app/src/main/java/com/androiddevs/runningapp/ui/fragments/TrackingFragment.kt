@@ -27,6 +27,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_tracking.*
@@ -44,7 +45,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
     private var isTracking = false
     private var curTimeInMillis = 0L
-    private var pathPoints = mutableListOf<LatLng>()
+    private var pathPoints = mutableListOf<MutableList<LatLng>>()
 
     private lateinit var viewModel: TrackingViewModel
 
@@ -92,13 +93,17 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
         viewModel.pathPoints.observe(viewLifecycleOwner, Observer {
             pathPoints = it
-            val polylineOptions = PolylineOptions()
-                .color(POLYLINE_COLOR)
-                .width(POLYLINE_WIDTH)
-                .addAll(it)
-            map?.addPolyline(polylineOptions)
-            if (it.isNotEmpty()) {
-                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last(), MAP_ZOOM))
+            for(polyline in it) {
+                val polylineOptions = PolylineOptions()
+                    .color(POLYLINE_COLOR)
+                    .width(POLYLINE_WIDTH)
+                    .addAll(polyline)
+
+                map?.addPolyline(polylineOptions)
+            }
+
+            if (it.isNotEmpty() && it.last().isNotEmpty()) {
+                map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last().last(), MAP_ZOOM))
             }
         })
 
@@ -122,29 +127,29 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
     private fun startOrResumeTrackingService() = Intent(requireActivity(), TrackingService::class.java).also {
         it.action = ACTION_START_OR_RESUME_SERVICE
-        requireActivity().startService(it)
+        requireActivity().applicationContext.startService(it)
         bindService()
     }
 
     private fun pauseTrackingService() = Intent(requireActivity(), TrackingService::class.java).also {
         it.action = ACTION_PAUSE_SERVICE
-        requireActivity().startService(it)
+        requireActivity().applicationContext.startService(it)
     }
 
     private fun stopTrackingService() = Intent(requireContext(), TrackingService::class.java).also {
         it.action = ACTION_STOP_SERVICE
-        requireActivity().startService(it)
+        requireActivity().applicationContext.startService(it)
     }
 
     private fun bindService() {
         val serviceBindIntent = Intent(requireActivity(), TrackingService::class.java)
-        requireActivity().bindService(serviceBindIntent, viewModel.serviceConnection, Context.BIND_AUTO_CREATE)
+        requireContext().applicationContext.bindService(serviceBindIntent, viewModel.serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        savedInstanceState?.let { state ->
+        /*savedInstanceState?.let { state ->
             Timber.d("SavedInstanceState is not null")
             if(state.containsKey("isTracking")) {
                 isTracking = state.getBoolean("isTracking")
@@ -162,32 +167,34 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
                     LatLng(curPoint.latitude, curPoint.longitude)
                 }?.toMutableList() ?: return
             }
-        } ?: Timber.d("SavedInstanceState is null")
+        } ?: Timber.d("SavedInstanceState is null")*/
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean("isTracking", isTracking)
+        /*outState.putBoolean("isTracking", isTracking)
         outState.putBinder("binder", trackingBinder)
         outState.putLong("curTimeInMillis", curTimeInMillis)
         val mapPointArray = pathPoints.map { MapPoint(it.latitude, it.longitude) }.toTypedArray()
         outState.putParcelableArray("pathPoints", mapPointArray)
         Timber.d("PUT SOMETHING IN SAVED INSTANCE STATE")
         arguments?.putBundle("savedState", outState)
-        super.onSaveInstanceState(outState)
+        super.onSaveInstanceState(outState)*/
 
-        /*val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
+        val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapViewBundle?.let {
             outState.putBundle(MAP_VIEW_BUNDLE_KEY, Bundle())
             Timber.d("Putting empty Bundle")
         } ?: mapView.onSaveInstanceState(mapViewBundle).also {
             Timber.d("Putting non-empty bundle")
-        }*/
+        }
     }
 
     private fun zoomToWholeDistance() {
         val bounds = LatLngBounds.Builder()
-        for (point in pathPoints) {
-            bounds.include(point)
+        for (polyline in pathPoints) {
+            for(point in polyline) {
+                bounds.include(point)
+            }
         }
         val width = mapView.width
         val height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200f, resources.displayMetrics).toInt()
@@ -203,8 +210,10 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
     private fun saveRunToDB() {
         map?.snapshot { bmp ->
-            val distanceInMeters = TrackingUtility.calculateTotalDistance(pathPoints).toInt()
-            Timber.d("distanceInMeters: $distanceInMeters")
+            var distanceInMeters = 0
+            for(polyline in pathPoints) {
+                distanceInMeters += TrackingUtility.calculateTotalDistance(polyline).toInt()
+            }
             Timber.d("curTimeInMillis: $curTimeInMillis")
             val avgSpeed = round((distanceInMeters / 1000f) / (curTimeInMillis / 1000f / 60 / 60) * 10) / 10f
             val date = Calendar.getInstance().time
