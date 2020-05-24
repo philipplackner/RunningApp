@@ -76,20 +76,16 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         mapView.getMapAsync {
             map = it
         }
-
-        retainInstance = false
     }
 
     private fun subscribeToObservers() {
         viewModel.isTracking.observe(viewLifecycleOwner, Observer {
             isTracking = it
-            Timber.d("IsTracking is $it")
-            Timber.d("TimeRunInMillis is ${curTimeInMillis}")
             if (curTimeInMillis > 0L && !isTracking) {
-                btnToggleRun.text = "Start"
+                btnToggleRun.text = getString(R.string.start_text)
                 btnFinishRun.visibility = View.VISIBLE
-            } else {
-                btnToggleRun.text = "Stop"
+            } else if(isTracking){
+                btnToggleRun.text = getString(R.string.stop_text)
                 btnFinishRun.visibility = View.GONE
             }
         })
@@ -116,10 +112,10 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     @SuppressLint("MissingPermission")
     private fun toggleRun() {
         if(isTracking) {
-            btnToggleRun.text = "Start"
+            btnToggleRun.text = getString(R.string.stop_text)
             pauseTrackingService()
         } else {
-            btnToggleRun.text = "Stop"
+            btnToggleRun.text = getString(R.string.start_text)
             startOrResumeTrackingService()
         }
     }

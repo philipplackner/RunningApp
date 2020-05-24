@@ -201,18 +201,10 @@ class TrackingService : Service(), LocationListener {
         }
     }
 
-    /*private fun getActivityPendingIntent() = NavDeepLinkBuilder(this)
-        .setComponentName(HomeActivity::class.java)
-        .setGraph(R.navigation.home_nav_graph)
-        .setDestination(R.id.trackingFragment)
-        .createPendingIntent() */
-
     private fun getActivityPendingIntent() = PendingIntent.getActivity(
         this,
         0,
-        Intent(this, HomeActivity::class.java).apply {
-            flags = FLAG_ACTIVITY_REORDER_TO_FRONT
-        },
+        Intent(this, HomeActivity::class.java),
         FLAG_UPDATE_CURRENT
     )
 
@@ -222,12 +214,12 @@ class TrackingService : Service(), LocationListener {
             val pauseIntent = Intent(this, TrackingService::class.java).apply {
                 action = ACTION_PAUSE_SERVICE
             }
-            PendingIntent.getService(this, 1, pauseIntent, 0)
+            PendingIntent.getService(this, 1, pauseIntent, FLAG_UPDATE_CURRENT)
         } else {
             val resumeIntent = Intent(this, TrackingService::class.java).apply {
                 action = ACTION_START_OR_RESUME_SERVICE
             }
-            PendingIntent.getService(this, 2, resumeIntent, 0)
+            PendingIntent.getService(this, 2, resumeIntent, FLAG_UPDATE_CURRENT)
         }
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
