@@ -21,15 +21,4 @@ class Converters {
         return outputStream.toByteArray()
     }
 
-    @TypeConverter
-    fun toDate(dateString: String): Date? {
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy-HH:mm:ss", Locale.getDefault())
-        return dateFormat.parse(dateString)
-    }
-
-    @TypeConverter
-    fun fromDate(date: Date?): String {
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy-HH:mm:ss", Locale.getDefault())
-        return dateFormat.format(date)
-    }
 }

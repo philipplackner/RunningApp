@@ -187,7 +187,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             val date = Calendar.getInstance().time
             val weight = requireContext().getSharedPreferences("sharedPref", MODE_PRIVATE).getFloat("weight", 80f)
             val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
-            val run = Run(bmp, date, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
+            val run = Run(bmp, timestamp, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
             viewModel.insertRun(run)
             Snackbar.make(requireActivity().findViewById(R.id.rootView), "Run saved successfully.", Snackbar.LENGTH_LONG).show()
         }

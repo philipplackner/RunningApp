@@ -7,10 +7,12 @@ import java.util.*
 
 class DateValueFormatter : ValueFormatter() {
 
-    val sdf = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
-
-    override fun getFormattedValue(value: Float, axis: AxisBase): String {
-
-        return super.getFormattedValue(value)
+    override fun getFormattedValue(value: Float): String {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = value.toLong()
+        }
+        val dateFormat = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
+        return dateFormat.format(calendar.time)
     }
+
 }

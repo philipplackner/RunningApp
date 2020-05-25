@@ -16,7 +16,7 @@ import kotlinx.android.synthetic.main.item_run.view.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-class RunAdapter: RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
+class RunAdapter : RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
 
     val diffCallback = object : DiffUtil.ItemCallback<Run>() {
         override fun areItemsTheSame(oldItem: Run, newItem: Run): Boolean {
@@ -30,7 +30,7 @@ class RunAdapter: RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
 
     val differ = AsyncListDiffer(this, diffCallback)
 
-    inner class RunViewHolder(itemView: View): RecyclerView.ViewHolder(itemView)
+    inner class RunViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
     fun submitList(list: List<Run>) = differ.submitList(list)
 
@@ -52,10 +52,13 @@ class RunAdapter: RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
         val run = differ.currentList[position]
         holder.itemView.apply {
             Glide.with(this).load(run.img).into(ivRunImage)
-            run.date?.let {
-                val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-                tvDate.text = dateFormat.format(it)
+
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = run.timestamp
             }
+            val dateFormat = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
+            tvDate.text = dateFormat.format(calendar.time)
+
             tvAvgSpeed.text = "${run.avgSpeedInKMH}km/h"
             tvDistance.text = "${run.distanceInMeters / 1000f}km"
             tvTime.text = TrackingUtility.getFormattedPreviewTimeWithMillis(run.timeInMillis)
