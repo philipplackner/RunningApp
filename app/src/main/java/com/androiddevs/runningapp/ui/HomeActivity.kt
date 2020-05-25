@@ -16,8 +16,8 @@ class HomeActivity : DaggerAppCompatActivity() {
     @Inject
     lateinit var viewModelProviderFactory: ViewModelProvider.Factory
 
-    lateinit var trackingViewModel: TrackingViewModel
     lateinit var homeViewModel: HomeViewModel
+    lateinit var statisticsViewModel: StatisticsViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,10 +25,10 @@ class HomeActivity : DaggerAppCompatActivity() {
 
         setSupportActionBar(toolbar)
         bottomNavigationView.setupWithNavController(navHostFragment.findNavController())
-        trackingViewModel =
-            ViewModelProvider(this, viewModelProviderFactory).get(TrackingViewModel::class.java)
         homeViewModel =
             ViewModelProvider(this, viewModelProviderFactory).get(HomeViewModel::class.java)
+        statisticsViewModel =
+            ViewModelProvider(this, viewModelProviderFactory).get(StatisticsViewModel::class.java)
 
         Navigation.findNavController(this, R.id.navHostFragment)
             .addOnDestinationChangedListener { _, destination, _ ->

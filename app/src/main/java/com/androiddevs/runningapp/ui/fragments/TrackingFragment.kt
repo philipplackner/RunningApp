@@ -1,7 +1,6 @@
 package com.androiddevs.runningapp.ui.fragments
 
 import android.annotation.SuppressLint
-import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.os.Bundle
 import android.util.TypedValue
@@ -21,7 +20,7 @@ import com.androiddevs.runningapp.services.ACTION_START_OR_RESUME_SERVICE
 import com.androiddevs.runningapp.services.ACTION_STOP_SERVICE
 import com.androiddevs.runningapp.services.TrackingService
 import com.androiddevs.runningapp.ui.HomeActivity
-import com.androiddevs.runningapp.ui.TrackingViewModel
+import com.androiddevs.runningapp.ui.HomeViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
@@ -29,7 +28,6 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.fragment_tracking.*
 import timber.log.Timber
 import java.util.*
@@ -50,7 +48,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     private var curTimeInMillis = 0L
     private var pathPoints = mutableListOf<MutableList<LatLng>>()
 
-    private lateinit var viewModel: TrackingViewModel
+    private lateinit var viewModel: HomeViewModel
 
     private var menu: Menu? = null
 
@@ -67,7 +65,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         super.onViewCreated(view, savedInstanceState)
         val mapViewBundle = savedInstanceState?.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapView.onCreate(mapViewBundle)
-        viewModel = (activity as HomeActivity).trackingViewModel
+        viewModel = (activity as HomeActivity).homeViewModel
 
         subscribeToObservers()
 

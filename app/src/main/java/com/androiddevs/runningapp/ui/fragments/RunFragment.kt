@@ -54,21 +54,11 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
 
             override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, pos: Int, id: Long) {
                 when(pos) {
-                    0 -> { // Date
-                        viewModel.filterRuns(SortType.DATE)
-                    }
-                    1 -> { // Running Time
-                        viewModel.filterRuns(SortType.RUNNING_TIME)
-                    }
-                    2 -> { // Distance
-                        viewModel.filterRuns(SortType.DISTANCE)
-                    }
-                    3 -> { // Average Speed
-                        viewModel.filterRuns(SortType.AVG_SPEED)
-                    }
-                    4 -> { // Calories Burned
-                        viewModel.filterRuns(SortType.CALORIES_BURNED)
-                    }
+                    0 -> viewModel.filterRuns(SortType.DATE)
+                    1 -> viewModel.filterRuns(SortType.RUNNING_TIME)
+                    2 -> viewModel.filterRuns(SortType.DISTANCE)
+                    3 -> viewModel.filterRuns(SortType.AVG_SPEED)
+                    4 -> viewModel.filterRuns(SortType.CALORIES_BURNED)
                 }
             }
         }
