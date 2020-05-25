@@ -41,4 +41,8 @@
             android:id="@+id/action_trackingFragment_to_runFragment2"
             app:destination="@id/runFragment2" />
     </fragment>
+
+    <action android:id="@+id/action_global_trackingFragment"
+        app:destination="@id/trackingFragment"
+        app:launchSingleTop="true"/>
 </navigation>

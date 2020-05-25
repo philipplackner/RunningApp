@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.*
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants
+import com.androiddevs.runningapp.other.Constants.Companion.ACTION_SHOW_TRACKING_FRAGMENT
 import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_DISTANCE
 import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
@@ -228,7 +229,9 @@ class TrackingService : LifecycleService(), LocationListener {
     private fun getActivityPendingIntent() = PendingIntent.getActivity(
         this,
         0,
-        Intent(this, HomeActivity::class.java),
+        Intent(this, HomeActivity::class.java).apply {
+            action = ACTION_SHOW_TRACKING_FRAGMENT
+        },
         FLAG_UPDATE_CURRENT
     )
 
