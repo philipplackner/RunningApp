@@ -8,6 +8,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import com.androiddevs.runningapp.R
+import com.androiddevs.runningapp.other.Constants.Companion.LINE_DATA_MODE
 import com.androiddevs.runningapp.other.DateValueFormatter
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.ui.HomeActivity
@@ -85,9 +86,11 @@ class StatisticsFragment : BaseFragment(R.layout.fragment_statistics) {
                 allAvgSpeeds.add(Entry(run.timestamp.toFloat(), run.avgSpeedInKMH))
             }
             val lineDataSet = LineDataSet(allAvgSpeeds, "Avg Speed over Time")
-            lineDataSet.valueTextColor = Color.WHITE
-            lineDataSet.color = ContextCompat.getColor(requireContext(), R.color.colorAccent)
-            lineDataSet.mode = LineDataSet.Mode.HORIZONTAL_BEZIER
+            lineDataSet.apply {
+                valueTextColor = Color.WHITE
+                color = ContextCompat.getColor(requireContext(), R.color.colorAccent)
+                mode = LINE_DATA_MODE
+            }
             val lineData = LineData(lineDataSet)
             lineChart.data = lineData
             lineChart.invalidate()

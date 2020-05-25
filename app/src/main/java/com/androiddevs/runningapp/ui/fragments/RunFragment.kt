@@ -45,6 +45,13 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
             }
         }
 
+        when(viewModel.sortType) {
+            SortType.DATE -> spFilter.setSelection(0)
+            SortType.RUNNING_TIME -> spFilter.setSelection(1)
+            SortType.DISTANCE -> spFilter.setSelection(2)
+            SortType.AVG_SPEED -> spFilter.setSelection(3)
+            SortType.CALORIES_BURNED -> spFilter.setSelection(4)
+        }
         viewModel.runs.observe(viewLifecycleOwner, Observer { runs ->
             runAdapter.submitList(runs)
         })
