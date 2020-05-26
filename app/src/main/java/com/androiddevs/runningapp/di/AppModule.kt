@@ -7,6 +7,7 @@ import androidx.room.Room
 import com.androiddevs.runningapp.db.RunDao
 import com.androiddevs.runningapp.db.RunningDatabase
 import com.androiddevs.runningapp.db.RunningDatabase.Companion.DATABASE_NAME
+import com.androiddevs.runningapp.other.Constants
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_FIRST_TIME_TOGGLE
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_NAME
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_WEIGHT
@@ -39,14 +40,18 @@ class AppModule {
 
     @Singleton
     @Provides
-    fun provideName(sharedPreferences: SharedPreferences) = sharedPreferences.getString(KEY_NAME, "") ?: ""
+    fun provideName(sharedPreferences: SharedPreferences) =
+        sharedPreferences.getString(KEY_NAME, "") ?: ""
 
     @Singleton
     @Provides
-    fun provideWeight(sharedPreferences: SharedPreferences) = sharedPreferences.getFloat(KEY_WEIGHT, 80f)
+    fun provideWeight(sharedPreferences: SharedPreferences) =
+        sharedPreferences.getFloat(KEY_WEIGHT, 80f)
 
     @Singleton
     @Provides
     fun provideFirstTimeToggle(sharedPreferences: SharedPreferences) = sharedPreferences.getBoolean(
-        KEY_FIRST_TIME_TOGGLE, true)
+        KEY_FIRST_TIME_TOGGLE, true
+    )
+
 }

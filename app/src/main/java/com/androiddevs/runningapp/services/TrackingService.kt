@@ -221,7 +221,6 @@ class TrackingService : LifecycleService(), LocationListener {
                 val notification = curNotification
                     .setContentText(TrackingUtility.getFormattedPreviewTimeWithMillis(it * 1000L))
                 notificationManager.notify(NOTIFICATION_ID, notification.build())
-                Timber.d("SERVICE: notify in observe")
             }
         }
     }
@@ -261,14 +260,11 @@ class TrackingService : LifecycleService(), LocationListener {
                 .addAction(R.drawable.ic_pause_black_24dp, notificationActionText, pendingIntent)
             notificationManager.notify(NOTIFICATION_ID, curNotification.build())
         }
-
-        Timber.d("SERVICE: notify in updateCurNotification")
-
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(notificationManager: NotificationManager) {
-        val channelName = "channelName"
+        val channelName = "Tracking"
         val channel = NotificationChannel(CHANNEL_ID, channelName, IMPORTANCE_LOW)
         notificationManager.createNotificationChannel(channel)
     }

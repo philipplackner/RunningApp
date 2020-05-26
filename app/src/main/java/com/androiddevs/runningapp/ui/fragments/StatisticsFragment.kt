@@ -58,42 +58,53 @@ class StatisticsFragment : BaseFragment(R.layout.fragment_statistics) {
 
     private fun subscribeToObservers() {
         viewModel.totalDistance.observe(viewLifecycleOwner, Observer {
-            val km = it / 1000f
-            val totalDistance = round(km * 10) / 10f
-            val totalDistanceString = "${totalDistance}km"
-            tvTotalDistance.text = totalDistanceString
+            // in case DB is empty it will be null
+            it?.let {
+                val km = it / 1000f
+                val totalDistance = round(km * 10) / 10f
+                val totalDistanceString = "${totalDistance}km"
+                tvTotalDistance.text = totalDistanceString
+            }
         })
 
         viewModel.totalTimeInMillis.observe(viewLifecycleOwner, Observer {
-            val totalTimeInMillis = TrackingUtility.getFormattedPreviewTimeWithMillis(it)
-            tvTotalTime.text = totalTimeInMillis
+            it?.let {
+                val totalTimeInMillis = TrackingUtility.getFormattedPreviewTimeWithMillis(it)
+                tvTotalTime.text = totalTimeInMillis
+            }
         })
 
         viewModel.totalAvgSpeed.observe(viewLifecycleOwner, Observer {
-            val roundedAvgSpeed = round(it * 10f) / 10f
-            val totalAvgSpeed = "${roundedAvgSpeed}km/h"
-            tvAverageSpeed.text = totalAvgSpeed
+            it?.let {
+                val roundedAvgSpeed = round(it * 10f) / 10f
+                val totalAvgSpeed = "${roundedAvgSpeed}km/h"
+                tvAverageSpeed.text = totalAvgSpeed
+            }
         })
 
         viewModel.totalCaloriesBurned.observe(viewLifecycleOwner, Observer {
-            val totalCaloriesBurned = "${it}kcal"
-            tvTotalCalories.text = totalCaloriesBurned
+            it?.let {
+                val totalCaloriesBurned = "${it}kcal"
+                tvTotalCalories.text = totalCaloriesBurned
+            }
         })
 
         viewModel.runsSortedByDate.observe(viewLifecycleOwner, Observer {
-            val allAvgSpeeds = mutableListOf<Entry>()
-            for(run in it) {
-                allAvgSpeeds.add(Entry(run.timestamp.toFloat(), run.avgSpeedInKMH))
+            it?.let {
+                val allAvgSpeeds = mutableListOf<Entry>()
+                for(run in it) {
+                    allAvgSpeeds.add(Entry(run.timestamp.toFloat(), run.avgSpeedInKMH))
+                }
+                val lineDataSet = LineDataSet(allAvgSpeeds, "Avg Speed over Time")
+                lineDataSet.apply {
+                    valueTextColor = Color.WHITE
+                    color = ContextCompat.getColor(requireContext(), R.color.colorAccent)
+                    mode = LINE_DATA_MODE
+                }
+                val lineData = LineData(lineDataSet)
+                lineChart.data = lineData
+                lineChart.invalidate()
             }
-            val lineDataSet = LineDataSet(allAvgSpeeds, "Avg Speed over Time")
-            lineDataSet.apply {
-                valueTextColor = Color.WHITE
-                color = ContextCompat.getColor(requireContext(), R.color.colorAccent)
-                mode = LINE_DATA_MODE
-            }
-            val lineData = LineData(lineDataSet)
-            lineChart.data = lineData
-            lineChart.invalidate()
         })
     }
 }

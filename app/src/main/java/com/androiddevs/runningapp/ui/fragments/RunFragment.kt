@@ -22,13 +22,13 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_run.*
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
+import timber.log.Timber
 import javax.inject.Inject
 
 private const val REQUEST_CODE_LOCATION_PERMISSION = 0
 
 class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.PermissionCallbacks {
 
-    @Inject
     lateinit var runAdapter: RunAdapter
 
     private lateinit var viewModel: HomeViewModel
@@ -36,6 +36,8 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel = (activity as HomeActivity).homeViewModel
+        runAdapter = RunAdapter()
+
         setupRecyclerView()
         requestPermissions()
         fab.setOnClickListener {

@@ -11,6 +11,7 @@ import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.db.Run
 import com.androiddevs.runningapp.db.RunDao
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_BUNDLE_KEY
+import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_HEIGHT_IN_DP
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_ZOOM
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
@@ -25,6 +26,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -86,20 +88,12 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
     private fun subscribeToObservers() {
         TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
-            isTracking = it
-            if (curTimeInMillis > 0L && !isTracking) {
-                btnToggleRun.text = getString(R.string.start_text)
-                btnFinishRun.visibility = View.VISIBLE
-            } else if(isTracking){
-                btnToggleRun.text = getString(R.string.stop_text)
-                menu?.getItem(0)?.isVisible = true
-                btnFinishRun.visibility = View.GONE
-            }
+            updateTracking(it)
         })
 
         TrackingService.pathPoints.observe(viewLifecycleOwner, Observer {
             pathPoints = it
-            for(polyline in it) {
+            for (polyline in it) {
                 val polylineOptions = PolylineOptions()
                     .color(POLYLINE_COLOR)
                     .width(POLYLINE_WIDTH)
@@ -109,10 +103,15 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
             }
 
             if (it.isNotEmpty() && it.last().isNotEmpty()) {
-                if(it.size == 1 && it.last().size == 1) {
+                if (it.size == 1 && it.last().size == 1) {
                     map?.moveCamera(CameraUpdateFactory.newLatLngZoom(it.last().last(), MAP_ZOOM))
                 } else {
-                    map?.animateCamera(CameraUpdateFactory.newLatLngZoom(it.last().last(), MAP_ZOOM))
+                    map?.animateCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                            it.last().last(),
+                            MAP_ZOOM
+                        )
+                    )
                 }
             }
         })
@@ -124,9 +123,21 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         })
     }
 
+    private fun updateTracking(isTracking: Boolean) {
+        this.isTracking = isTracking
+        if (curTimeInMillis > 0L && !isTracking) {
+            btnToggleRun.text = getString(R.string.start_text)
+            btnFinishRun.visibility = View.VISIBLE
+        } else if (isTracking) {
+            btnToggleRun.text = getString(R.string.stop_text)
+            menu?.getItem(0)?.isVisible = true
+            btnFinishRun.visibility = View.GONE
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun toggleRun() {
-        if(isTracking) {
+        if (isTracking) {
             btnToggleRun.text = getString(R.string.stop_text)
             menu?.getItem(0)?.isVisible = true
             pauseTrackingService()
@@ -137,20 +148,23 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         }
     }
 
-    private fun startOrResumeTrackingService() = Intent(requireContext().applicationContext, TrackingService::class.java).also {
-        it.action = ACTION_START_OR_RESUME_SERVICE
-        requireContext().applicationContext.startService(it)
-    }
+    private fun startOrResumeTrackingService() =
+        Intent(requireContext().applicationContext, TrackingService::class.java).also {
+            it.action = ACTION_START_OR_RESUME_SERVICE
+            requireContext().applicationContext.startService(it)
+        }
 
-    private fun pauseTrackingService() = Intent(requireContext().applicationContext, TrackingService::class.java).also {
-        it.action = ACTION_PAUSE_SERVICE
-        requireContext().applicationContext.startService(it)
-    }
+    private fun pauseTrackingService() =
+        Intent(requireContext().applicationContext, TrackingService::class.java).also {
+            it.action = ACTION_PAUSE_SERVICE
+            requireContext().applicationContext.startService(it)
+        }
 
-    private fun stopTrackingService() = Intent(requireContext().applicationContext, TrackingService::class.java).also {
-        it.action = ACTION_STOP_SERVICE
-        requireContext().applicationContext.startService(it)
-    }
+    private fun stopTrackingService() =
+        Intent(requireContext().applicationContext, TrackingService::class.java).also {
+            it.action = ACTION_STOP_SERVICE
+            requireContext().applicationContext.startService(it)
+        }
 
     override fun onSaveInstanceState(outState: Bundle) {
         val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
@@ -165,12 +179,16 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     private fun zoomToWholeDistance() {
         val bounds = LatLngBounds.Builder()
         for (polyline in pathPoints) {
-            for(point in polyline) {
+            for (point in polyline) {
                 bounds.include(point)
             }
         }
         val width = mapView.width
-        val height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200f, resources.displayMetrics).toInt()
+        val height = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            MAP_VIEW_HEIGHT_IN_DP,
+            resources.displayMetrics
+        ).toInt()
         map?.moveCamera(
             CameraUpdateFactory.newLatLngBounds(
                 bounds.build(),
@@ -184,16 +202,21 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     private fun saveRunToDB() {
         map?.snapshot { bmp ->
             var distanceInMeters = 0
-            for(polyline in pathPoints) {
+            for (polyline in pathPoints) {
                 distanceInMeters += TrackingUtility.calculateTotalDistance(polyline).toInt()
             }
             val avgSpeed = round((distanceInMeters / 1000f) / (curTimeInMillis / 1000f / 60 / 60) * 10) / 10f
             val date = Calendar.getInstance().time
             val weight = requireContext().getSharedPreferences("sharedPref", MODE_PRIVATE).getFloat("weight", 80f)
             val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
-            val run = Run(bmp, timestamp, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
+            val run =
+                Run(bmp, timestamp, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
             viewModel.insertRun(run)
-            Snackbar.make(requireActivity().findViewById(R.id.rootView), "Run saved successfully.", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(
+                requireActivity().findViewById(R.id.rootView),
+                "Run saved successfully.",
+                Snackbar.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -203,7 +226,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when(item.itemId) {
+        when (item.itemId) {
             R.id.miCancelTracking -> {
                 showCancelTrackingDialog()
             }
@@ -221,16 +244,16 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         super.onPrepareOptionsMenu(menu)
         // just checking for isTracking doesnt trigger this when rotating the device
         // in paused mode
-        if(curTimeInMillis > 0L) {
+        if (curTimeInMillis > 0L) {
             this.menu?.getItem(0)?.isVisible = true
         }
     }
 
     private fun showCancelTrackingDialog() {
-        val dialog = MaterialAlertDialogBuilder(requireContext())
+        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogTheme)
             .setTitle("Cancel the Run?")
             .setMessage("Are you sure that you want to cancel the current run and delete its data?")
-            .setIcon(R.drawable.ic_delete_black_24dp)
+            .setIcon(R.drawable.ic_delete)
             .setPositiveButton("Yes") { _, _ ->
                 stopRun()
             }

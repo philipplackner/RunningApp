@@ -1,4 +1,4 @@
-package com.androiddevs.runningapp.di.home
+package com.androiddevs.runningapp.di.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.androiddevs.runningapp.di.ViewModelKey
@@ -6,7 +6,6 @@ import com.androiddevs.runningapp.ui.HomeViewModel
 import dagger.Binds
 import dagger.Module
 import dagger.multibindings.IntoMap
-import javax.inject.Singleton
 
 @Module
 abstract class HomeViewModelModule {

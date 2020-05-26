@@ -1,14 +1,17 @@
 package com.androiddevs.runningapp.ui
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.Navigation
+import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants.Companion.ACTION_SHOW_TRACKING_FRAGMENT
+import com.androiddevs.runningapp.other.Constants.Companion.KEY_NAME
 import dagger.android.support.DaggerAppCompatActivity
 import kotlinx.android.synthetic.main.activity_home.*
 import timber.log.Timber
@@ -18,6 +21,9 @@ class HomeActivity : DaggerAppCompatActivity() {
 
     @Inject
     lateinit var viewModelProviderFactory: ViewModelProvider.Factory
+
+    @Inject
+    lateinit var name: String
 
     lateinit var homeViewModel: HomeViewModel
     lateinit var statisticsViewModel: StatisticsViewModel
@@ -34,6 +40,11 @@ class HomeActivity : DaggerAppCompatActivity() {
             ViewModelProvider(this, viewModelProviderFactory).get(StatisticsViewModel::class.java)
 
         navigateToTrackingFragmentIfNeeded(intent)
+
+        if(name.isNotEmpty()) {
+            val toolbarTitle = "Let's go, $name!"
+            tvToolbarTitle?.text = toolbarTitle
+        }
 
         Navigation.findNavController(this, R.id.navHostFragment)
             .addOnDestinationChangedListener { _, destination, _ ->

@@ -1,8 +1,7 @@
-package com.androiddevs.runningapp.di.home
+package com.androiddevs.runningapp.di.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.androiddevs.runningapp.di.ViewModelKey
-import com.androiddevs.runningapp.ui.HomeViewModel
 import com.androiddevs.runningapp.ui.StatisticsViewModel
 import dagger.Binds
 import dagger.Module

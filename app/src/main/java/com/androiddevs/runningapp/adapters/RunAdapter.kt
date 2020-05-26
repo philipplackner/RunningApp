@@ -18,7 +18,7 @@ import java.util.*
 
 class RunAdapter : RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
 
-    val diffCallback = object : DiffUtil.ItemCallback<Run>() {
+    private val diffCallback = object : DiffUtil.ItemCallback<Run>() {
         override fun areItemsTheSame(oldItem: Run, newItem: Run): Boolean {
             return oldItem.id == newItem.id
         }
@@ -59,10 +59,16 @@ class RunAdapter : RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
             val dateFormat = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
             tvDate.text = dateFormat.format(calendar.time)
 
-            tvAvgSpeed.text = "${run.avgSpeedInKMH}km/h"
-            tvDistance.text = "${run.distanceInMeters / 1000f}km"
+            "${run.avgSpeedInKMH}km/h".also {
+                tvAvgSpeed.text = it
+            }
+            "${run.distanceInMeters / 1000f}km".also {
+                tvDistance.text = it
+            }
             tvTime.text = TrackingUtility.getFormattedPreviewTimeWithMillis(run.timeInMillis)
-            tvCalories.text = "${run.caloriesBurned}kcal"
+            "${run.caloriesBurned}kcal".also {
+                tvCalories.text = it
+            }
         }
     }
 }

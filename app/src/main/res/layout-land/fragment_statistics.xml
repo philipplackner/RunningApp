@@ -20,12 +20,11 @@
         android:id="@+id/tvTotalDistance"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="3000km"
+        android:text="0km"
         android:textSize="30sp"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
-        app:layout_constraintEnd_toStartOf="@+id/lineChart"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/tvTotalTime"
+        app:layout_constraintEnd_toEndOf="@+id/tvAverageSpeed"
+        app:layout_constraintStart_toStartOf="@+id/tvAverageSpeed"
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.textview.MaterialTextView
@@ -42,19 +41,18 @@
         android:id="@+id/tvTotalTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="08:00:00"
+        android:text="00:00:00"
         android:textSize="30sp"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
-        app:layout_constraintEnd_toStartOf="@+id/tvTotalDistance"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/tvTotalCalories"
+        app:layout_constraintStart_toStartOf="@+id/tvTotalCalories"
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/tvTotalCalories"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="5000kcal"
+        android:text="0kcal"
         android:textSize="30sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/tvAverageSpeed"
@@ -85,7 +83,7 @@
         android:id="@+id/tvAverageSpeed"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="10.5km/h"
+        android:text="0km/h"
         android:textSize="30sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/lineChart"

@@ -21,6 +21,8 @@ class Constants {
 
         val LINE_DATA_MODE = LineDataSet.Mode.CUBIC_BEZIER
 
+        const val MAP_VIEW_HEIGHT_IN_DP = 200f
+
         // Shared Preferences
         const val SHARED_PREFERENCES_NAME = "sharedPref"
         const val KEY_NAME = "KEY_NAME"

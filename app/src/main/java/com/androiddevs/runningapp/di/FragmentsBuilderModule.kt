@@ -1,6 +1,5 @@
 package com.androiddevs.runningapp.di
 
-import com.androiddevs.runningapp.di.fragments.*
 import com.androiddevs.runningapp.ui.fragments.*
 import dagger.Module
 import dagger.android.ContributesAndroidInjector
@@ -8,18 +7,18 @@ import dagger.android.ContributesAndroidInjector
 @Module
 abstract class FragmentsBuilderModule {
 
-    @ContributesAndroidInjector(modules = [SetupFragmentModule::class])
+    @ContributesAndroidInjector
     abstract fun bindSetupFragment(): SetupFragment
 
-    @ContributesAndroidInjector(modules = [RunFragmentModule::class])
+    @ContributesAndroidInjector
     abstract fun bindRunFragment(): RunFragment
 
-    @ContributesAndroidInjector(modules = [StatisticsFragmentModule::class])
+    @ContributesAndroidInjector
     abstract fun bindStatisticsFragment(): StatisticsFragment
 
-    @ContributesAndroidInjector(modules = [SettingsFragmentModule::class])
+    @ContributesAndroidInjector
     abstract fun bindSettingsFragment(): SettingsFragment
 
-    @ContributesAndroidInjector(modules = [TrackingFragmentModule::class])
+    @ContributesAndroidInjector
     abstract fun bindTrackingFragment(): TrackingFragment
 }

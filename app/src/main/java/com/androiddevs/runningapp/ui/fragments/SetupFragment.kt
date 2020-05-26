@@ -10,6 +10,7 @@ import com.androiddevs.runningapp.other.Constants.Companion.KEY_FIRST_TIME_TOGGL
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_NAME
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_WEIGHT
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.fragment_setup.*
 import javax.inject.Inject
 
@@ -57,6 +58,8 @@ class SetupFragment : BaseFragment(R.layout.fragment_setup) {
             .putFloat(KEY_WEIGHT, weightText.toFloat())
             .putBoolean(KEY_FIRST_TIME_TOGGLE, false)
             .apply()
+        val toolbarText = "Let's go, $name!"
+        requireActivity().tvToolbarTitle.text = toolbarText
         return true
     }
 
