@@ -9,11 +9,7 @@ import dagger.android.ContributesAndroidInjector
 @Module
 abstract class ActivityBuildersModule {
 
-    // TODO: Add ViewModel
-    @ContributesAndroidInjector
-    abstract fun contributeSetupActivity(): SetupActivity
-
-    @ContributesAndroidInjector(modules = [TrackingViewModelModule::class, HomeViewModelModule::class, HomeModule::class])
+    @ContributesAndroidInjector(modules = [HomeViewModelModule::class, StatisticsViewModelModule::class])
     abstract fun contributeHomeActivity(): HomeActivity
 
 }

@@ -18,11 +18,13 @@ import androidx.lifecycle.*
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants
 import com.androiddevs.runningapp.other.Constants.Companion.ACTION_SHOW_TRACKING_FRAGMENT
-import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_PROVIDER
-import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_DISTANCE
-import com.androiddevs.runningapp.other.Constants.Companion.MIN_LOCATION_UPDATE_INTERVAL
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.ui.HomeActivity
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -36,7 +38,7 @@ const val ACTION_START_OR_RESUME_SERVICE = "ACTION_START_SERVICE"
 const val ACTION_PAUSE_SERVICE = "ACTION_PAUSE_SERVICE"
 const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
 
-class TrackingService : LifecycleService(), LocationListener {
+class TrackingService : LifecycleService() {
 
     private var isTimerEnabled = false
     private var lapTime = 0L
@@ -63,6 +65,8 @@ class TrackingService : LifecycleService(), LocationListener {
 
     private var curNotification = baseNotificationBuilder
 
+    lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("SERVICE: onDestroy")
@@ -72,6 +76,7 @@ class TrackingService : LifecycleService(), LocationListener {
         super.onCreate()
         Timber.d("SERVICE: onCreate")
         postInitialValues()
+        fusedLocationProviderClient = FusedLocationProviderClient(this)
         isTracking.observe(this) {
             updateCurNotification(it)
             updateLocationChecking(it)
@@ -128,15 +133,30 @@ class TrackingService : LifecycleService(), LocationListener {
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         if (isTracking) {
             if (TrackingUtility.hasLocationPermissions(this)) {
-                locationManager.requestLocationUpdates(
-                    LOCATION_PROVIDER,
-                    MIN_LOCATION_UPDATE_INTERVAL,
-                    MIN_LOCATION_UPDATE_DISTANCE,
-                    this
-                )
+                LocationRequest().apply {
+                    interval = 5000L
+                    fastestInterval = 2000L
+                    priority = PRIORITY_HIGH_ACCURACY
+                }.also {
+                    fusedLocationProviderClient.requestLocationUpdates(it, locationCallback, Looper.getMainLooper())
+                }
             }
         } else {
-            locationManager.removeUpdates(this)
+            fusedLocationProviderClient.removeLocationUpdates(locationCallback)
+        }
+    }
+
+    val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(result: LocationResult?) {
+            super.onLocationResult(result)
+            if(!isTracking.value!!) {
+                return
+            }
+            result?.locations?.let { locations ->
+                for(location in locations) {
+                    addPathPoint(location)
+                }
+            }
         }
     }
 
@@ -173,25 +193,6 @@ class TrackingService : LifecycleService(), LocationListener {
                 pathPoints.postValue(this)
             }
         }
-    }
-
-    override fun onLocationChanged(newLocation: Location?) {
-        if (isTracking.value!!) {
-            addPathPoint(newLocation)
-            Timber.d("Location changed: (${newLocation?.latitude}, ${newLocation?.longitude})")
-        }
-    }
-
-    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-        Timber.d("Status changed: $status")
-    }
-
-    override fun onProviderEnabled(provider: String?) {
-        Timber.d("Provider enabled: $provider")
-    }
-
-    override fun onProviderDisabled(provider: String?) {
-        Timber.d("Provider disabled: $provider")
     }
 
     private fun addEmptyPolyline() = pathPoints.value?.apply {

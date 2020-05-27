@@ -41,10 +41,7 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
         setupRecyclerView()
         requestPermissions()
         fab.setOnClickListener {
-            //findNavController().navigate(R.id.action_runFragment2_to_trackingFragment)
-            Intent(requireContext(), TrackingActivity::class.java).also {
-                startActivity(it)
-            }
+            findNavController().navigate(R.id.action_runFragment2_to_trackingFragment)
         }
 
         when(viewModel.sortType) {
