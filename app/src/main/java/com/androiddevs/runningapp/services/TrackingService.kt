@@ -3,21 +3,30 @@ package com.androiddevs.runningapp.services
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.NotificationManager.*
+import android.app.NotificationManager.IMPORTANCE_LOW
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Context
 import android.content.Intent
 import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
-import android.os.*
+import android.os.Build
+import android.os.Looper
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import androidx.lifecycle.*
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.observe
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants
+import com.androiddevs.runningapp.other.Constants.Companion.ACTION_PAUSE_SERVICE
 import com.androiddevs.runningapp.other.Constants.Companion.ACTION_SHOW_TRACKING_FRAGMENT
+import com.androiddevs.runningapp.other.Constants.Companion.ACTION_START_OR_RESUME_SERVICE
+import com.androiddevs.runningapp.other.Constants.Companion.ACTION_STOP_SERVICE
+import com.androiddevs.runningapp.other.Constants.Companion.FASTEST_LOCATION_UPDATE_INTERVAL
+import com.androiddevs.runningapp.other.Constants.Companion.LOCATION_UPDATE_INTERVAL
+import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_CHANNEL_ID
+import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_CHANNEL_NAME
+import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_ID
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.ui.HomeActivity
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -26,17 +35,11 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.model.LatLng
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import timber.log.Timber
-
-private const val CHANNEL_ID = "tracking_channel"
-private const val NOTIFICATION_ID = 1
-
-private const val SERVICE_ID = 1
-
-const val ACTION_START_OR_RESUME_SERVICE = "ACTION_START_SERVICE"
-const val ACTION_PAUSE_SERVICE = "ACTION_PAUSE_SERVICE"
-const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
 
 class TrackingService : LifecycleService() {
 
@@ -49,6 +52,7 @@ class TrackingService : LifecycleService() {
     private var lastSecondTimestamp = 0L
 
     private var isFirstRun = true
+    private var serviceKilled = false
 
     companion object {
         val timeRunInMillis = MutableLiveData<Long>()
@@ -56,32 +60,31 @@ class TrackingService : LifecycleService() {
         val pathPoints = MutableLiveData<MutableList<MutableList<LatLng>>>()
     }
 
-    private val baseNotificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
+    /**
+     * Base notification builder that contains the settings every notification will have
+     */
+    private val baseNotificationBuilder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
         .setAutoCancel(false)
         .setOngoing(true)
         .setSmallIcon(R.drawable.ic_directions_run_black_24dp)
         .setContentTitle("Running App")
         .setContentText("00:00:00")
 
+    /**
+     * Builder of the current notification
+     */
     private var curNotification = baseNotificationBuilder
 
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
-    override fun onDestroy() {
-        super.onDestroy()
-        Timber.d("SERVICE: onDestroy")
-    }
-
     override fun onCreate() {
         super.onCreate()
-        Timber.d("SERVICE: onCreate")
         postInitialValues()
         fusedLocationProviderClient = FusedLocationProviderClient(this)
         isTracking.observe(this) {
-            updateCurNotification(it)
+            updateNotificationTrackingState(it)
             updateLocationChecking(it)
         }
-
     }
 
     private fun postInitialValues() {
@@ -91,14 +94,11 @@ class TrackingService : LifecycleService() {
         timeRunInSeconds.postValue(0L)
     }
 
-    private var serviceKilled = false
-
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
             when (it.action) {
                 ACTION_START_OR_RESUME_SERVICE -> {
-                    Timber.d("GOT COMMAND TO START OR RESUME")
                     if(isFirstRun) {
                         startForegroundService()
                         isFirstRun = false
@@ -120,6 +120,9 @@ class TrackingService : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
+    /**
+     * Stops the service properly.
+     */
     private fun killService() {
         serviceKilled = true
         pauseService()
@@ -128,14 +131,16 @@ class TrackingService : LifecycleService() {
         stopSelf()
     }
 
+    /**
+     * Enables or disables location tracking according to the tracking state.
+     */
     @SuppressLint("MissingPermission")
     private fun updateLocationChecking(isTracking: Boolean) {
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         if (isTracking) {
             if (TrackingUtility.hasLocationPermissions(this)) {
                 LocationRequest().apply {
-                    interval = 5000L
-                    fastestInterval = 2000L
+                    interval = LOCATION_UPDATE_INTERVAL
+                    fastestInterval = FASTEST_LOCATION_UPDATE_INTERVAL
                     priority = PRIORITY_HIGH_ACCURACY
                 }.also {
                     fusedLocationProviderClient.requestLocationUpdates(it, locationCallback, Looper.getMainLooper())
@@ -146,26 +151,32 @@ class TrackingService : LifecycleService() {
         }
     }
 
-    val locationCallback = object : LocationCallback() {
+    /**
+     * Location Callback that receives location updates and adds them to pathPoints.
+     */
+    private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult?) {
             super.onLocationResult(result)
-            if(!isTracking.value!!) {
-                return
-            }
-            result?.locations?.let { locations ->
-                for(location in locations) {
-                    addPathPoint(location)
+            if(isTracking.value!!) {
+                result?.locations?.let { locations ->
+                    for(location in locations) {
+                        addPathPoint(location)
+                    }
                 }
             }
         }
     }
 
+    /**
+     * Starts the timer for the tracking.
+     */
     private fun startTimer() {
+        addEmptyPolyline()
         isTracking.postValue(true)
         timeStarted = System.currentTimeMillis()
         isTimerEnabled = true
         CoroutineScope(Dispatchers.Main).launch {
-            while (isTimerEnabled) {
+            while (isTracking.value!!) {
                 lapTime = System.currentTimeMillis() - timeStarted
                 timeRunInMillis.postValue(timeRun + lapTime)
                 if (timeRunInMillis.value!! >= lastSecondTimestamp + 1000L) {
@@ -178,23 +189,30 @@ class TrackingService : LifecycleService() {
         }
     }
 
+    /**
+     * Disables the timer and tracking.
+     */
     private fun pauseService() {
         isTimerEnabled = false
         isTracking.postValue(false)
     }
 
+    /**
+     * This adds the location to the last list of pathPoints.
+     */
     private fun addPathPoint(location: Location?) {
         location?.let {
             val pos = LatLng(location.latitude, location.longitude)
             pathPoints.value?.apply {
-                last().apply {
-                    add(pos)
-                }
+                last().add(pos)
                 pathPoints.postValue(this)
             }
         }
     }
 
+    /**
+     * Will add an empty polyline in the pathPoints list or initialize it if empty.
+     */
     private fun addEmptyPolyline() = pathPoints.value?.apply {
         add(mutableListOf())
         pathPoints.postValue(this)
@@ -235,7 +253,7 @@ class TrackingService : LifecycleService() {
         FLAG_UPDATE_CURRENT
     )
 
-    private fun updateCurNotification(isTracking: Boolean) {
+    private fun updateNotificationTrackingState(isTracking: Boolean) {
         val notificationActionText = if (isTracking) "Pause" else "Resume"
         val pendingIntent = if (isTracking) {
             val pauseIntent = Intent(this, TrackingService::class.java).apply {
@@ -265,8 +283,7 @@ class TrackingService : LifecycleService() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(notificationManager: NotificationManager) {
-        val channelName = "Tracking"
-        val channel = NotificationChannel(CHANNEL_ID, channelName, IMPORTANCE_LOW)
+        val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_NAME, IMPORTANCE_LOW)
         notificationManager.createNotificationChannel(channel)
     }
 }

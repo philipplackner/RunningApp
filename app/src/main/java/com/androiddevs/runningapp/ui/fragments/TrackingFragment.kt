@@ -9,16 +9,15 @@ import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.db.Run
-import com.androiddevs.runningapp.db.RunDao
+import com.androiddevs.runningapp.other.Constants.Companion.ACTION_PAUSE_SERVICE
+import com.androiddevs.runningapp.other.Constants.Companion.ACTION_START_OR_RESUME_SERVICE
+import com.androiddevs.runningapp.other.Constants.Companion.ACTION_STOP_SERVICE
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_BUNDLE_KEY
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_VIEW_HEIGHT_IN_DP
 import com.androiddevs.runningapp.other.Constants.Companion.MAP_ZOOM
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
 import com.androiddevs.runningapp.other.TrackingUtility
-import com.androiddevs.runningapp.services.ACTION_PAUSE_SERVICE
-import com.androiddevs.runningapp.services.ACTION_START_OR_RESUME_SERVICE
-import com.androiddevs.runningapp.services.ACTION_STOP_SERVICE
 import com.androiddevs.runningapp.services.TrackingService
 import com.androiddevs.runningapp.ui.HomeActivity
 import com.androiddevs.runningapp.ui.HomeViewModel
@@ -26,7 +25,6 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -38,14 +36,12 @@ import kotlin.math.round
 
 class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
-    @Inject
-    lateinit var runDao: RunDao
-
     @set:Inject
     var weight: Float = 80f
 
     private var map: GoogleMap? = null
 
+    private var isInitialState = true
     private var isTracking = false
     private var curTimeInMillis = 0L
     private var pathPoints = mutableListOf<MutableList<LatLng>>()
@@ -83,9 +79,16 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
         mapView.getMapAsync {
             map = it
+            if(isInitialState) {
+                addAllPolylines()
+                isInitialState = false
+            }
         }
     }
 
+    /**
+     * Subscribes to changes of LiveData objects
+     */
     private fun subscribeToObservers() {
         TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
             updateTracking(it)
@@ -93,27 +96,8 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
         TrackingService.pathPoints.observe(viewLifecycleOwner, Observer {
             pathPoints = it
-            for (polyline in it) {
-                val polylineOptions = PolylineOptions()
-                    .color(POLYLINE_COLOR)
-                    .width(POLYLINE_WIDTH)
-                    .addAll(polyline)
-
-                map?.addPolyline(polylineOptions)
-            }
-
-            if (it.isNotEmpty() && it.last().isNotEmpty()) {
-                if (it.size == 1 && it.last().size == 1) {
-                    map?.moveCamera(CameraUpdateFactory.newLatLngZoom(it.last().last(), MAP_ZOOM))
-                } else {
-                    map?.animateCamera(
-                        CameraUpdateFactory.newLatLngZoom(
-                            it.last().last(),
-                            MAP_ZOOM
-                        )
-                    )
-                }
-            }
+            addLatestPolyline()
+            moveCameraToUser()
         })
 
         TrackingService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
@@ -123,6 +107,55 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         })
     }
 
+    /**
+     * Will move the camera to the user's location.
+     */
+    private fun moveCameraToUser() {
+        if (pathPoints.isNotEmpty() && pathPoints.last().isNotEmpty()) {
+            if (pathPoints.size == 1 && pathPoints.last().size == 1) {
+                map?.moveCamera(CameraUpdateFactory.newLatLngZoom(pathPoints.last().last(), MAP_ZOOM))
+            } else {
+                map?.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        pathPoints.last().last(),
+                        MAP_ZOOM
+                    )
+                )
+            }
+        }
+    }
+
+    private fun addAllPolylines() {
+        for(polyline in pathPoints) {
+            val polylineOptions = PolylineOptions()
+                .color(POLYLINE_COLOR)
+                .width(POLYLINE_WIDTH)
+                .addAll(polyline)
+            map?.addPolyline(polylineOptions)
+        }
+    }
+
+    /**
+     * Draws a polyline between the two latest points.
+     */
+    private fun addLatestPolyline() {
+        // only add polyline if we have at least two elements in the last polyline
+        if(pathPoints.isNotEmpty() && pathPoints.last().size > 1) {
+            val preLastLatLng = pathPoints.last()[pathPoints.last().size - 2]
+            val lastLatLng = pathPoints.last().last()
+            val polylineOptions = PolylineOptions()
+                .color(POLYLINE_COLOR)
+                .width(POLYLINE_WIDTH)
+                .add(preLastLatLng)
+                .add(lastLatLng)
+
+            map?.addPolyline(polylineOptions)
+        }
+    }
+
+    /**
+     * Updates the tracking variable and the UI accordingly
+     */
     private fun updateTracking(isTracking: Boolean) {
         this.isTracking = isTracking
         if (curTimeInMillis > 0L && !isTracking) {
@@ -135,6 +168,9 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         }
     }
 
+    /**
+     * Toggles the tracking state
+     */
     @SuppressLint("MissingPermission")
     private fun toggleRun() {
         if (isTracking) {
@@ -148,18 +184,27 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         }
     }
 
+    /**
+     * Starts the tracking service or resumes it if it is currently paused.
+     */
     private fun startOrResumeTrackingService() =
         Intent(requireContext().applicationContext, TrackingService::class.java).also {
             it.action = ACTION_START_OR_RESUME_SERVICE
             requireContext().applicationContext.startService(it)
         }
 
+    /**
+     * Pauses the tracking service
+     */
     private fun pauseTrackingService() =
         Intent(requireContext().applicationContext, TrackingService::class.java).also {
             it.action = ACTION_PAUSE_SERVICE
             requireContext().applicationContext.startService(it)
         }
 
+    /**
+     * Stops the tracking service.
+     */
     private fun stopTrackingService() =
         Intent(requireContext().applicationContext, TrackingService::class.java).also {
             it.action = ACTION_STOP_SERVICE
@@ -170,12 +215,13 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapViewBundle?.let {
             outState.putBundle(MAP_VIEW_BUNDLE_KEY, Bundle())
-            Timber.d("Putting empty Bundle")
-        } ?: mapView?.onSaveInstanceState(mapViewBundle).also {
-            Timber.d("Putting non-empty bundle")
-        }
+        } ?: mapView?.onSaveInstanceState(mapViewBundle)
     }
 
+    /**
+     * Zooms out until the whole track is visible. Used to make a screenshot of the
+     * MapView to save it in the database
+     */
     private fun zoomToWholeDistance() {
         val bounds = LatLngBounds.Builder()
         for (polyline in pathPoints) {
@@ -199,6 +245,9 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         )
     }
 
+    /**
+     * Saves the recent run in the Room database
+     */
     private fun saveRunToDB() {
         map?.snapshot { bmp ->
             var distanceInMeters = 0
@@ -220,6 +269,9 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         }
     }
 
+    /**
+     * Finishes the tracking.
+     */
     private fun stopRun() {
         stopTrackingService()
         findNavController().navigate(R.id.action_trackingFragment_to_runFragment2)
@@ -249,6 +301,9 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         }
     }
 
+    /**
+     * Shows a dialog to cancel the current run.
+     */
     private fun showCancelTrackingDialog() {
         val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogTheme)
             .setTitle("Cancel the Run?")

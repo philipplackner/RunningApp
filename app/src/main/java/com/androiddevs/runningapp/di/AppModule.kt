@@ -6,8 +6,7 @@ import android.content.SharedPreferences
 import androidx.room.Room
 import com.androiddevs.runningapp.db.RunDao
 import com.androiddevs.runningapp.db.RunningDatabase
-import com.androiddevs.runningapp.db.RunningDatabase.Companion.DATABASE_NAME
-import com.androiddevs.runningapp.other.Constants
+import com.androiddevs.runningapp.other.Constants.Companion.DATABASE_NAME
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_FIRST_TIME_TOGGLE
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_NAME
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_WEIGHT
