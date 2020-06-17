@@ -1,17 +1,17 @@
 package com.androiddevs.runningapp.ui
 
 import androidx.lifecycle.ViewModel
-import com.androiddevs.runningapp.repositories.HomeRepository
+import com.androiddevs.runningapp.repositories.MainRepository
 import javax.inject.Inject
 
 class StatisticsViewModel @Inject constructor(
-    homeRepository: HomeRepository
+    mainRepository: MainRepository
 ) : ViewModel() {
 
-    var totalDistance = homeRepository.getTotalDistance()
-    var totalTimeInMillis = homeRepository.getTotalTimeInMillis()
-    var totalAvgSpeed = homeRepository.getTotalAvgSpeed()
-    var totalCaloriesBurned = homeRepository.getTotalCaloriesBurned()
+    var totalDistance = mainRepository.getTotalDistance()
+    var totalTimeInMillis = mainRepository.getTotalTimeInMillis()
+    var totalAvgSpeed = mainRepository.getTotalAvgSpeed()
+    var totalCaloriesBurned = mainRepository.getTotalCaloriesBurned()
 
-    var runsSortedByDate = homeRepository.getAllRunsSortedByDate()
+    var runsSortedByDate = mainRepository.getAllRunsSortedByDate()
 }

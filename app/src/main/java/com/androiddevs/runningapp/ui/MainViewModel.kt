@@ -5,19 +5,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.androiddevs.runningapp.db.Run
 import com.androiddevs.runningapp.other.SortType
-import com.androiddevs.runningapp.repositories.HomeRepository
+import com.androiddevs.runningapp.repositories.MainRepository
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-class HomeViewModel @Inject constructor(
-    val homeRepository: HomeRepository
+class MainViewModel @Inject constructor(
+    val mainRepository: MainRepository
 ) : ViewModel() {
 
-    private val runsSortedByDate = homeRepository.getAllRunsSortedByDate()
-    private val runsSortedByDistance = homeRepository.getAllRunsSortedByDistance()
-    private val runsSortedByTimeInMillis = homeRepository.getAllRunsSortedByTimeInMillis()
-    private val runsSortedByAvgSpeed = homeRepository.getAllRunsSortedByAvgSpeed()
-    private val runsSortedByCaloriesBurned = homeRepository.getAllRunsSortedByCaloriesBurned()
+    private val runsSortedByDate = mainRepository.getAllRunsSortedByDate()
+    private val runsSortedByDistance = mainRepository.getAllRunsSortedByDistance()
+    private val runsSortedByTimeInMillis = mainRepository.getAllRunsSortedByTimeInMillis()
+    private val runsSortedByAvgSpeed = mainRepository.getAllRunsSortedByAvgSpeed()
+    private val runsSortedByCaloriesBurned = mainRepository.getAllRunsSortedByCaloriesBurned()
 
     val runs = MediatorLiveData<List<Run>>()
 
@@ -62,10 +62,10 @@ class HomeViewModel @Inject constructor(
     }
 
     fun insertRun(run: Run) = viewModelScope.launch {
-        homeRepository.insertRun(run)
+        mainRepository.insertRun(run)
     }
 
     fun deleteRun(run: Run) = viewModelScope.launch {
-        homeRepository.deleteRun(run)
+        mainRepository.deleteRun(run)
     }
 }

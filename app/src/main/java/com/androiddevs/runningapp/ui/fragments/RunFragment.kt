@@ -1,12 +1,10 @@
 package com.androiddevs.runningapp.ui.fragments
 
 import android.Manifest
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -14,28 +12,25 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.adapters.RunAdapter
-import com.androiddevs.runningapp.db.Run
+import com.androiddevs.runningapp.other.Constants.Companion.REQUEST_CODE_LOCATION_PERMISSION
 import com.androiddevs.runningapp.other.SortType
-import com.androiddevs.runningapp.ui.HomeActivity
-import com.androiddevs.runningapp.ui.HomeViewModel
+import com.androiddevs.runningapp.other.TrackingUtility
+import com.androiddevs.runningapp.ui.MainActivity
+import com.androiddevs.runningapp.ui.MainViewModel
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_run.*
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
-import timber.log.Timber
-import javax.inject.Inject
-
-private const val REQUEST_CODE_LOCATION_PERMISSION = 0
 
 class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.PermissionCallbacks {
 
     lateinit var runAdapter: RunAdapter
 
-    private lateinit var viewModel: HomeViewModel
+    private lateinit var viewModel: MainViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel = (activity as HomeActivity).homeViewModel
+        viewModel = (activity as MainActivity).mainViewModel
         runAdapter = RunAdapter()
 
         setupRecyclerView()
@@ -44,7 +39,7 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
             findNavController().navigate(R.id.action_runFragment2_to_trackingFragment)
         }
 
-        when(viewModel.sortType) {
+        when (viewModel.sortType) {
             SortType.DATE -> spFilter.setSelection(0)
             SortType.RUNNING_TIME -> spFilter.setSelection(1)
             SortType.DISTANCE -> spFilter.setSelection(2)
@@ -58,8 +53,13 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
         spFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(adapterView: AdapterView<*>?) {}
 
-            override fun onItemSelected(adapterView: AdapterView<*>?, view: View?, pos: Int, id: Long) {
-                when(pos) {
+            override fun onItemSelected(
+                adapterView: AdapterView<*>?,
+                view: View?,
+                pos: Int,
+                id: Long
+            ) {
+                when (pos) {
                     0 -> viewModel.filterRuns(SortType.DATE)
                     1 -> viewModel.filterRuns(SortType.RUNNING_TIME)
                     2 -> viewModel.filterRuns(SortType.DISTANCE)
@@ -70,7 +70,7 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
         }
     }
 
-    val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
+    private val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
         ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
     ) {
         override fun onMove(
@@ -101,45 +101,36 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
     }
 
     private fun requestPermissions() {
+        if (TrackingUtility.hasLocationPermissions(requireContext())) {
+            return
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            val permissions = arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            )
             EasyPermissions.requestPermissions(
                 this,
                 "You need to accept location permission to use this app",
                 REQUEST_CODE_LOCATION_PERMISSION,
-                *permissions
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
             )
         } else {
-            val permissions = arrayOf(
+            EasyPermissions.requestPermissions(
+                this,
+                "You need to accept location permissions to use this app",
+                REQUEST_CODE_LOCATION_PERMISSION,
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 Manifest.permission.ACCESS_BACKGROUND_LOCATION
             )
-            if (!EasyPermissions.hasPermissions(requireContext(), *permissions)) {
-                EasyPermissions.requestPermissions(
-                    this,
-                    "You need to accept location permissions to use this app",
-                    REQUEST_CODE_LOCATION_PERMISSION,
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                )
-            }
         }
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
         if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
-            AppSettingsDialog.Builder(this).build().show()
+            AppSettingsDialog.Builder(this).setThemeResId(R.style.AlertDialogTheme).build().show()
         }
     }
 
-    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
-
-    }
+    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {}
 
     override fun onRequestPermissionsResult(
         requestCode: Int,

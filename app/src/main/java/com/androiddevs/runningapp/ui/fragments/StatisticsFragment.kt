@@ -1,19 +1,16 @@
 package com.androiddevs.runningapp.ui.fragments
 
 import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
 import android.view.View
-import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants.Companion.LINE_DATA_MODE
 import com.androiddevs.runningapp.other.DateValueFormatter
 import com.androiddevs.runningapp.other.TrackingUtility
-import com.androiddevs.runningapp.ui.HomeActivity
+import com.androiddevs.runningapp.ui.MainActivity
 import com.androiddevs.runningapp.ui.StatisticsViewModel
-import com.github.mikephil.charting.components.Description
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
@@ -27,7 +24,7 @@ class StatisticsFragment : BaseFragment(R.layout.fragment_statistics) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel = (activity as HomeActivity).statisticsViewModel
+        viewModel = (activity as MainActivity).statisticsViewModel
         setupLineChart()
         subscribeToObservers()
     }

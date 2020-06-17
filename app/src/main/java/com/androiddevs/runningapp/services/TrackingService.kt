@@ -28,7 +28,7 @@ import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_CHANNEL
 import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_CHANNEL_NAME
 import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_ID
 import com.androiddevs.runningapp.other.TrackingUtility
-import com.androiddevs.runningapp.ui.HomeActivity
+import com.androiddevs.runningapp.ui.MainActivity
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -75,7 +75,7 @@ class TrackingService : LifecycleService() {
      */
     private var curNotification = baseNotificationBuilder
 
-    lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
     override fun onCreate() {
         super.onCreate()
@@ -94,7 +94,6 @@ class TrackingService : LifecycleService() {
         timeRunInSeconds.postValue(0L)
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
             when (it.action) {
@@ -125,6 +124,7 @@ class TrackingService : LifecycleService() {
      */
     private fun killService() {
         serviceKilled = true
+        isFirstRun = true
         pauseService()
         postInitialValues()
         stopForeground(true)
@@ -247,7 +247,7 @@ class TrackingService : LifecycleService() {
     private fun getActivityPendingIntent() = PendingIntent.getActivity(
         this,
         0,
-        Intent(this, HomeActivity::class.java).apply {
+        Intent(this, MainActivity::class.java).apply {
             action = ACTION_SHOW_TRACKING_FRAGMENT
         },
         FLAG_UPDATE_CURRENT

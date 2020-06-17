@@ -19,8 +19,8 @@ import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_COLOR
 import com.androiddevs.runningapp.other.Constants.Companion.POLYLINE_WIDTH
 import com.androiddevs.runningapp.other.TrackingUtility
 import com.androiddevs.runningapp.services.TrackingService
-import com.androiddevs.runningapp.ui.HomeActivity
-import com.androiddevs.runningapp.ui.HomeViewModel
+import com.androiddevs.runningapp.ui.MainActivity
+import com.androiddevs.runningapp.ui.MainViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
@@ -46,7 +46,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     private var curTimeInMillis = 0L
     private var pathPoints = mutableListOf<MutableList<LatLng>>()
 
-    private lateinit var viewModel: HomeViewModel
+    private lateinit var viewModel: MainViewModel
 
     private var menu: Menu? = null
 
@@ -63,9 +63,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
         super.onViewCreated(view, savedInstanceState)
         val mapViewBundle = savedInstanceState?.getBundle(MAP_VIEW_BUNDLE_KEY)
         mapView.onCreate(mapViewBundle)
-        viewModel = (activity as HomeActivity).homeViewModel
-
-        subscribeToObservers()
+        viewModel = (activity as MainActivity).mainViewModel
 
         btnToggleRun.setOnClickListener {
             toggleRun()
@@ -73,8 +71,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
 
         btnFinishRun.setOnClickListener {
             zoomToWholeDistance()
-            saveRunToDB()
-            stopRun()
+            endRunAndSaveToDB()
         }
 
         mapView.getMapAsync {
@@ -84,6 +81,11 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
                 isInitialState = false
             }
         }
+    }
+
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+        subscribeToObservers()
     }
 
     /**
@@ -188,34 +190,32 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
      * Starts the tracking service or resumes it if it is currently paused.
      */
     private fun startOrResumeTrackingService() =
-        Intent(requireContext().applicationContext, TrackingService::class.java).also {
+        Intent(requireContext(), TrackingService::class.java).also {
             it.action = ACTION_START_OR_RESUME_SERVICE
-            requireContext().applicationContext.startService(it)
+            requireContext().startService(it)
         }
 
     /**
      * Pauses the tracking service
      */
     private fun pauseTrackingService() =
-        Intent(requireContext().applicationContext, TrackingService::class.java).also {
+        Intent(requireContext(), TrackingService::class.java).also {
             it.action = ACTION_PAUSE_SERVICE
-            requireContext().applicationContext.startService(it)
+            requireContext().startService(it)
         }
 
     /**
      * Stops the tracking service.
      */
     private fun stopTrackingService() =
-        Intent(requireContext().applicationContext, TrackingService::class.java).also {
+        Intent(requireContext(), TrackingService::class.java).also {
             it.action = ACTION_STOP_SERVICE
-            requireContext().applicationContext.startService(it)
+            requireContext().startService(it)
         }
 
     override fun onSaveInstanceState(outState: Bundle) {
         val mapViewBundle = outState.getBundle(MAP_VIEW_BUNDLE_KEY)
-        mapViewBundle?.let {
-            outState.putBundle(MAP_VIEW_BUNDLE_KEY, Bundle())
-        } ?: mapView?.onSaveInstanceState(mapViewBundle)
+        mapView?.onSaveInstanceState(mapViewBundle)
     }
 
     /**
@@ -246,9 +246,9 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
     }
 
     /**
-     * Saves the recent run in the Room database
+     * Saves the recent run in the Room database and ends it
      */
-    private fun saveRunToDB() {
+    private fun endRunAndSaveToDB() {
         map?.snapshot { bmp ->
             var distanceInMeters = 0
             for (polyline in pathPoints) {
@@ -266,6 +266,7 @@ class TrackingFragment : BaseFragment(R.layout.fragment_tracking) {
                 "Run saved successfully.",
                 Snackbar.LENGTH_LONG
             ).show()
+            stopRun()
         }
     }
 

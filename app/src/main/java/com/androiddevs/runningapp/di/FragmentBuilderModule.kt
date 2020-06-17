@@ -5,7 +5,7 @@ import dagger.Module
 import dagger.android.ContributesAndroidInjector
 
 @Module
-abstract class FragmentsBuilderModule {
+abstract class FragmentBuilderModule {
 
     @ContributesAndroidInjector
     abstract fun bindSetupFragment(): SetupFragment
