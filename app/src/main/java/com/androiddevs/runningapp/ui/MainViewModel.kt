@@ -1,5 +1,6 @@
 package com.androiddevs.runningapp.ui
 
+import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,9 +8,10 @@ import com.androiddevs.runningapp.db.Run
 import com.androiddevs.runningapp.other.SortType
 import com.androiddevs.runningapp.repositories.MainRepository
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
-class MainViewModel @Inject constructor(
+class MainViewModel @ViewModelInject constructor(
     val mainRepository: MainRepository
 ) : ViewModel() {
 
@@ -23,8 +25,12 @@ class MainViewModel @Inject constructor(
 
     var sortType = SortType.DATE
 
+    /**
+     * Posts the correct run list in the LiveData
+     */
     init {
         runs.addSource(runsSortedByDate) { result ->
+            Timber.d("RUNS SORTED BY DATE")
             if(sortType == SortType.DATE) {
                 result?.let { runs.value = it }
             }
@@ -51,7 +57,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun filterRuns(sortType: SortType) = when(sortType) {
+    fun sortRuns(sortType: SortType) = when(sortType) {
         SortType.DATE -> runsSortedByDate.value?.let { runs.value = it }
         SortType.DISTANCE -> runsSortedByDistance.value?.let { runs.value = it }
         SortType.RUNNING_TIME -> runsSortedByTimeInMillis.value?.let { runs.value = it }

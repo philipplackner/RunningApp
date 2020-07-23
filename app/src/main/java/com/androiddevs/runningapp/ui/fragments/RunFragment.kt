@@ -5,6 +5,8 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -15,22 +17,23 @@ import com.androiddevs.runningapp.adapters.RunAdapter
 import com.androiddevs.runningapp.other.Constants.Companion.REQUEST_CODE_LOCATION_PERMISSION
 import com.androiddevs.runningapp.other.SortType
 import com.androiddevs.runningapp.other.TrackingUtility
-import com.androiddevs.runningapp.ui.MainActivity
 import com.androiddevs.runningapp.ui.MainViewModel
 import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_run.*
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 
-class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.PermissionCallbacks {
+@AndroidEntryPoint
+class RunFragment : Fragment(R.layout.fragment_run), EasyPermissions.PermissionCallbacks {
 
     lateinit var runAdapter: RunAdapter
 
-    private lateinit var viewModel: MainViewModel
+    private val viewModel: MainViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel = (activity as MainActivity).mainViewModel
+        //viewModel = (activity as MainActivity).mainViewModel
         runAdapter = RunAdapter()
 
         setupRecyclerView()
@@ -60,16 +63,19 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
                 id: Long
             ) {
                 when (pos) {
-                    0 -> viewModel.filterRuns(SortType.DATE)
-                    1 -> viewModel.filterRuns(SortType.RUNNING_TIME)
-                    2 -> viewModel.filterRuns(SortType.DISTANCE)
-                    3 -> viewModel.filterRuns(SortType.AVG_SPEED)
-                    4 -> viewModel.filterRuns(SortType.CALORIES_BURNED)
+                    0 -> viewModel.sortRuns(SortType.DATE)
+                    1 -> viewModel.sortRuns(SortType.RUNNING_TIME)
+                    2 -> viewModel.sortRuns(SortType.DISTANCE)
+                    3 -> viewModel.sortRuns(SortType.AVG_SPEED)
+                    4 -> viewModel.sortRuns(SortType.CALORIES_BURNED)
                 }
             }
         }
     }
 
+    /**
+     * Handles swipe-to-delete
+     */
     private val itemTouchHelperCallback = object : ItemTouchHelper.SimpleCallback(
         ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
     ) {
@@ -127,6 +133,8 @@ class RunFragment : BaseFragment(R.layout.fragment_run), EasyPermissions.Permiss
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
         if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
             AppSettingsDialog.Builder(this).setThemeResId(R.style.AlertDialogTheme).build().show()
+        } else {
+            requestPermissions()
         }
     }
 

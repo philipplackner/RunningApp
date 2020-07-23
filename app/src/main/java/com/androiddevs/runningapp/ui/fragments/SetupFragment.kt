@@ -3,6 +3,7 @@ package com.androiddevs.runningapp.ui.fragments
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
+import androidx.fragment.app.Fragment
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.androiddevs.runningapp.R
@@ -10,11 +11,13 @@ import com.androiddevs.runningapp.other.Constants.Companion.KEY_FIRST_TIME_TOGGL
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_NAME
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_WEIGHT
 import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_setup.*
 import javax.inject.Inject
 
-class SetupFragment : BaseFragment(R.layout.fragment_setup) {
+@AndroidEntryPoint
+class SetupFragment : Fragment(R.layout.fragment_setup) {
 
     @Inject
     lateinit var sharedPref: SharedPreferences
@@ -47,6 +50,9 @@ class SetupFragment : BaseFragment(R.layout.fragment_setup) {
         }
     }
 
+    /**
+     * Saves the name and the weight in shared preferences
+     */
     private fun writePersonalDataToSharedPref(): Boolean {
         val name = etName.text.toString()
         val weightText = etWeight.text.toString()

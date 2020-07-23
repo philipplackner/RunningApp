@@ -9,6 +9,9 @@ import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * Converter class to save bitmaps in the Room Database
+ */
 class Converters {
 
     @TypeConverter

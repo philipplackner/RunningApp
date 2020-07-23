@@ -4,50 +4,49 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.androiddevs.runningapp.R
-import com.androiddevs.runningapp.other.Constants.Companion.LINE_DATA_MODE
-import com.androiddevs.runningapp.other.DateValueFormatter
+import com.androiddevs.runningapp.ui.CustomMarkerView
 import com.androiddevs.runningapp.other.TrackingUtility
-import com.androiddevs.runningapp.ui.MainActivity
 import com.androiddevs.runningapp.ui.StatisticsViewModel
 import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.data.*
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_statistics.*
 import kotlin.math.round
 
-class StatisticsFragment : BaseFragment(R.layout.fragment_statistics) {
+@AndroidEntryPoint
+class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
 
-    lateinit var viewModel: StatisticsViewModel
+    private val viewModel: StatisticsViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel = (activity as MainActivity).statisticsViewModel
         setupLineChart()
         subscribeToObservers()
     }
 
     private fun setupLineChart() {
-        lineChart.xAxis.apply {
+        barChart.xAxis.apply {
             position = XAxis.XAxisPosition.BOTTOM
-            valueFormatter = DateValueFormatter()
+            setDrawLabels(false)
             axisLineColor = Color.WHITE
             textColor = Color.WHITE
             setDrawGridLines(false)
         }
-        lineChart.axisLeft.apply {
+        barChart.axisLeft.apply {
             axisLineColor = Color.WHITE
             textColor = Color.WHITE
             setDrawGridLines(false)
         }
-        lineChart.axisRight.apply {
+        barChart.axisRight.apply {
             axisLineColor = Color.WHITE
             textColor = Color.WHITE
             setDrawGridLines(false)
         }
-        lineChart.apply {
+        barChart.apply {
             description.text = "Avg Speed Over Time"
             legend.isEnabled = false
         }
@@ -66,7 +65,7 @@ class StatisticsFragment : BaseFragment(R.layout.fragment_statistics) {
 
         viewModel.totalTimeInMillis.observe(viewLifecycleOwner, Observer {
             it?.let {
-                val totalTimeInMillis = TrackingUtility.getFormattedPreviewTimeWithMillis(it)
+                val totalTimeInMillis = TrackingUtility.getFormattedStopWatchTime(it)
                 tvTotalTime.text = totalTimeInMillis
             }
         })
@@ -88,19 +87,22 @@ class StatisticsFragment : BaseFragment(R.layout.fragment_statistics) {
 
         viewModel.runsSortedByDate.observe(viewLifecycleOwner, Observer {
             it?.let {
-                val allAvgSpeeds = mutableListOf<Entry>()
-                for(run in it) {
-                    allAvgSpeeds.add(Entry(run.timestamp.toFloat(), run.avgSpeedInKMH))
-                }
-                val lineDataSet = LineDataSet(allAvgSpeeds, "Avg Speed over Time")
-                lineDataSet.apply {
+                val allAvgSpeeds = it.indices.map { i -> BarEntry(i.toFloat(), it[i].avgSpeedInKMH) }
+
+                val bardataSet = BarDataSet(allAvgSpeeds, "Avg Speed over Time")
+                bardataSet.apply {
                     valueTextColor = Color.WHITE
                     color = ContextCompat.getColor(requireContext(), R.color.colorAccent)
-                    mode = LINE_DATA_MODE
                 }
-                val lineData = LineData(lineDataSet)
-                lineChart.data = lineData
-                lineChart.invalidate()
+                val lineData = BarData(bardataSet)
+                barChart.data = lineData
+                val marker = CustomMarkerView(
+                    it.reversed(),
+                    requireContext(),
+                    R.layout.marker_view
+                )
+                barChart.marker = marker
+                barChart.invalidate()
             }
         })
     }

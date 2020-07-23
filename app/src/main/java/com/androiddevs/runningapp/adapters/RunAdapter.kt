@@ -5,8 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.ItemTouchHelper.*
 import androidx.recyclerview.widget.RecyclerView
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.db.Run
@@ -24,10 +22,11 @@ class RunAdapter : RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
         }
 
         override fun areContentsTheSame(oldItem: Run, newItem: Run): Boolean {
-            return oldItem == newItem
+            return oldItem.hashCode() == newItem.hashCode()
         }
     }
 
+    // ListDiffer to efficiently deal with changes in the RecyclerView
     val differ = AsyncListDiffer(this, diffCallback)
 
     inner class RunViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
@@ -50,6 +49,7 @@ class RunAdapter : RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
 
     override fun onBindViewHolder(holder: RunViewHolder, position: Int) {
         val run = differ.currentList[position]
+        // set item data
         holder.itemView.apply {
             Glide.with(this).load(run.img).into(ivRunImage)
 
@@ -65,7 +65,7 @@ class RunAdapter : RecyclerView.Adapter<RunAdapter.RunViewHolder>() {
             "${run.distanceInMeters / 1000f}km".also {
                 tvDistance.text = it
             }
-            tvTime.text = TrackingUtility.getFormattedPreviewTimeWithMillis(run.timeInMillis)
+            tvTime.text = TrackingUtility.getFormattedStopWatchTime(run.timeInMillis)
             "${run.caloriesBurned}kcal".also {
                 tvCalories.text = it
             }

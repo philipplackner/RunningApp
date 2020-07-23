@@ -1,10 +1,11 @@
 package com.androiddevs.runningapp.ui
 
+import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.ViewModel
 import com.androiddevs.runningapp.repositories.MainRepository
 import javax.inject.Inject
 
-class StatisticsViewModel @Inject constructor(
+class StatisticsViewModel @ViewModelInject constructor(
     mainRepository: MainRepository
 ) : ViewModel() {
 

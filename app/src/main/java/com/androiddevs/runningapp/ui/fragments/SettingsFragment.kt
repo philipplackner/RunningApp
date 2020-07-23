@@ -3,15 +3,18 @@ package com.androiddevs.runningapp.ui.fragments
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
+import androidx.fragment.app.Fragment
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_NAME
 import com.androiddevs.runningapp.other.Constants.Companion.KEY_WEIGHT
 import com.google.android.material.snackbar.Snackbar
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_settings.*
 import javax.inject.Inject
 
-class SettingsFragment : BaseFragment(R.layout.fragment_settings) {
+@AndroidEntryPoint
+class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
     @Inject
     lateinit var sharedPref: SharedPreferences

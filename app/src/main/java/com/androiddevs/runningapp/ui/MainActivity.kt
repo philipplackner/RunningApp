@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.findNavController
@@ -12,19 +14,15 @@ import androidx.navigation.ui.setupWithNavController
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants.Companion.ACTION_SHOW_TRACKING_FRAGMENT
 import dagger.android.support.DaggerAppCompatActivity
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_main.*
 import javax.inject.Inject
 
-class MainActivity : DaggerAppCompatActivity() {
-
-    @Inject
-    lateinit var viewModelProviderFactory: ViewModelProvider.Factory
+@AndroidEntryPoint
+class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var name: String
-
-    lateinit var mainViewModel: MainViewModel
-    lateinit var statisticsViewModel: StatisticsViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,10 +30,7 @@ class MainActivity : DaggerAppCompatActivity() {
 
         setSupportActionBar(toolbar)
         bottomNavigationView.setupWithNavController(navHostFragment.findNavController())
-        mainViewModel =
-            ViewModelProvider(this, viewModelProviderFactory).get(MainViewModel::class.java)
-        statisticsViewModel =
-            ViewModelProvider(this, viewModelProviderFactory).get(StatisticsViewModel::class.java)
+        bottomNavigationView.setOnNavigationItemReselectedListener { /* NO-OP */ }
 
         navigateToTrackingFragmentIfNeeded(intent)
 
@@ -54,6 +49,8 @@ class MainActivity : DaggerAppCompatActivity() {
             }
     }
 
+
+    //Checks if we launched the activity from the notification
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         navigateToTrackingFragmentIfNeeded(intent)

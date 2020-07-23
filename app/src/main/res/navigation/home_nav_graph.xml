@@ -8,12 +8,6 @@
         android:name="com.androiddevs.runningapp.ui.fragments.RunFragment"
         android:label="RunFragment" >
         <action
-            android:id="@+id/action_runFragment2_to_statisticsFragment"
-            app:destination="@id/statisticsFragment" />
-        <action
-            android:id="@+id/action_runFragment2_to_settingsFragment"
-            app:destination="@id/settingsFragment" />
-        <action
             android:id="@+id/action_runFragment2_to_trackingFragment"
             app:destination="@id/trackingFragment" />
     </fragment>
