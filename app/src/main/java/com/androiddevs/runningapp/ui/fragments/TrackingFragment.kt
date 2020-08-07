@@ -221,6 +221,8 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      * MapView to save it in the database
      */
     private fun zoomToWholeTrack() {
+        stopRun()
+
         val bounds = LatLngBounds.Builder()
         for (polyline in pathPoints) {
             for (point in polyline) {
@@ -229,6 +231,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
         }
         val width = mapView.width
         val height = mapView.height
+        map?.setOnCameraMoveStartedListener(cameraMoveStartedListener)
         map?.moveCamera(
             CameraUpdateFactory.newLatLngBounds(
                 bounds.build(),
@@ -237,6 +240,14 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
                 (height * 0.05f).toInt()
             )
         )
+    }
+
+    private val cameraMoveStartedListener = GoogleMap.OnCameraMoveStartedListener {
+        map?.setOnCameraIdleListener {
+            endRunAndSaveToDB()
+            map?.setOnCameraMoveStartedListener(null)
+            map?.setOnCameraIdleListener(null)
+        }
     }
 
     /**
@@ -260,7 +271,6 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
                 "Run saved successfully.",
                 Snackbar.LENGTH_LONG
             ).show()
-            stopRun()
         }
     }
 
