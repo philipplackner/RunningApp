@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.view.*
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -67,9 +68,11 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
         // restore dialog instance
         if(savedInstanceState != null) {
-            val cancelRunDialog = parentFragmentManager.findFragmentByTag(CANCEL_DIALOG_TAG) as CancelRunDialog?
+            val cancelRunDialog =
+                parentFragmentManager.findFragmentByTag(CANCEL_DIALOG_TAG) as CancelRunDialog?
             cancelRunDialog?.setYesListener {
                 stopRun()
+                findNavController().navigate(R.id.action_trackingFragment_to_runFragment2)
             }
         }
 
@@ -79,7 +82,6 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
         btnFinishRun.setOnClickListener {
             zoomToWholeTrack()
-            endRunAndSaveToDB()
         }
 
         mapView.getMapAsync {
@@ -232,14 +234,21 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
         val width = mapView.width
         val height = mapView.height
         map?.setOnCameraMoveStartedListener(cameraMoveStartedListener)
-        map?.moveCamera(
-            CameraUpdateFactory.newLatLngBounds(
-                bounds.build(),
-                width,
-                height,
-                (height * 0.05f).toInt()
+        val rect : LatLngBounds
+        try {
+            rect = bounds.build()
+            map?.moveCamera(
+                CameraUpdateFactory.newLatLngBounds(
+                    rect,
+                    width,
+                    height,
+                    (height * 0.05f).toInt()
+                )
             )
-        )
+        } catch (e : IllegalStateException){
+            Toast.makeText(requireContext(),"No location data available.", Toast.LENGTH_SHORT).show()
+            return
+        }
     }
 
     private val cameraMoveStartedListener = GoogleMap.OnCameraMoveStartedListener {
@@ -247,6 +256,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
             endRunAndSaveToDB()
             map?.setOnCameraMoveStartedListener(null)
             map?.setOnCameraIdleListener(null)
+            findNavController().navigate(R.id.action_trackingFragment_to_runFragment2)
         }
     }
 
@@ -279,9 +289,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      */
     private fun stopRun() {
         Timber.d("STOPPING RUN")
-        tvTimer.text = "00:00:00:00"
         stopTrackingService()
-        findNavController().navigate(R.id.action_trackingFragment_to_runFragment2)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -315,6 +323,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
         CancelRunDialog().apply {
             setYesListener {
                 stopRun()
+                findNavController().navigate(R.id.action_trackingFragment_to_runFragment2)
             }
         }.show(parentFragmentManager, CANCEL_DIALOG_TAG)
     }

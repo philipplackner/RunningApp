@@ -19,7 +19,6 @@ import androidx.lifecycle.observe
 import com.androiddevs.runningapp.R
 import com.androiddevs.runningapp.other.Constants
 import com.androiddevs.runningapp.other.Constants.Companion.ACTION_PAUSE_SERVICE
-import com.androiddevs.runningapp.other.Constants.Companion.ACTION_SHOW_TRACKING_FRAGMENT
 import com.androiddevs.runningapp.other.Constants.Companion.ACTION_START_OR_RESUME_SERVICE
 import com.androiddevs.runningapp.other.Constants.Companion.ACTION_STOP_SERVICE
 import com.androiddevs.runningapp.other.Constants.Companion.FASTEST_LOCATION_UPDATE_INTERVAL
@@ -28,7 +27,6 @@ import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_CHANNEL
 import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_CHANNEL_NAME
 import com.androiddevs.runningapp.other.Constants.Companion.NOTIFICATION_ID
 import com.androiddevs.runningapp.other.TrackingUtility
-import com.androiddevs.runningapp.ui.MainActivity
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -123,10 +121,13 @@ class TrackingService : LifecycleService() {
     private fun killService() {
         serviceKilled = true
         isFirstRun = true
-        pauseService()
-        postInitialValues()
         stopForeground(true)
         stopSelf()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        postInitialValues()
     }
 
     /**
