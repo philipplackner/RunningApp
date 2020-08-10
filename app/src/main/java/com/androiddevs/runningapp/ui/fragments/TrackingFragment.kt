@@ -3,6 +3,7 @@ package com.androiddevs.runningapp.ui.fragments
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.*
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -253,10 +254,10 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
     private val cameraMoveStartedListener = GoogleMap.OnCameraMoveStartedListener {
         map?.setOnCameraIdleListener {
+            SystemClock.sleep(1000L)
             endRunAndSaveToDB()
             map?.setOnCameraMoveStartedListener(null)
             map?.setOnCameraIdleListener(null)
-            findNavController().navigate(R.id.action_trackingFragment_to_runFragment2)
         }
     }
 
@@ -264,18 +265,20 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      * Saves the recent run in the Room database and ends it
      */
     private fun endRunAndSaveToDB() {
+        var distanceInMeters = 0
+        for (polyline in pathPoints) {
+            distanceInMeters += TrackingUtility.calculatePolylineLength(polyline).toInt()
+        }
+        val avgSpeed =
+            round((distanceInMeters / 1000f) / (curTimeInMillis / 1000f / 60 / 60) * 10) / 10f
+        val timestamp = Calendar.getInstance().timeInMillis
+        val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
         map?.snapshot { bmp ->
-            var distanceInMeters = 0
-            for (polyline in pathPoints) {
-                distanceInMeters += TrackingUtility.calculatePolylineLength(polyline).toInt()
-            }
-            val avgSpeed =
-                round((distanceInMeters / 1000f) / (curTimeInMillis / 1000f / 60 / 60) * 10) / 10f
-            val timestamp = Calendar.getInstance().timeInMillis
-            val caloriesBurned = ((distanceInMeters / 1000f) * weight).toInt()
             val run =
                 Run(bmp, timestamp, avgSpeed, distanceInMeters, curTimeInMillis, caloriesBurned)
-            viewModel.insertRun(run)
+            viewModel.insertRun(run).invokeOnCompletion {
+                findNavController().navigate(R.id.action_trackingFragment_to_runFragment2)
+            }
             Snackbar.make(
                 requireActivity().findViewById(R.id.rootView),
                 "Run saved successfully.",
