@@ -224,7 +224,6 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
      * MapView to save it in the database
      */
     private fun zoomToWholeTrack() {
-        stopRun()
 
         val bounds = LatLngBounds.Builder()
         for (polyline in pathPoints) {
@@ -258,6 +257,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
             endRunAndSaveToDB()
             map?.setOnCameraMoveStartedListener(null)
             map?.setOnCameraIdleListener(null)
+            stopRun()
         }
     }
 
